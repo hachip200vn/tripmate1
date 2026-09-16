@@ -21,7 +21,8 @@ import {
   Moon,
   Ticket,
   Users,
-  Check
+  Check,
+  Trash2
 } from 'lucide-react';
 import { TripDay, TimelineActivity, Member } from '../types';
 
@@ -31,12 +32,17 @@ interface ItineraryViewProps {
   onSelectDay: (day: number) => void;
   activities: TimelineActivity[];
   members: Member[];
+  tripTitle?: string;
+  tripDatesSummary?: string;
+  tripCoverImage?: string;
+  aiSummary?: string;
   onOpenAiPlanner: () => void;
   onAddActivity: () => void;
   onOpenInviteModal: () => void;
   onVoteAgain: (activityTitle: string) => void;
   onOpenFullscreenMap: () => void;
   onOptimizeRoute: () => void;
+  onResetTrip?: () => void;
 }
 
 export const ItineraryView: React.FC<ItineraryViewProps> = ({
@@ -45,15 +51,49 @@ export const ItineraryView: React.FC<ItineraryViewProps> = ({
   onSelectDay,
   activities,
   members,
+  tripTitle,
+  tripDatesSummary,
+  tripCoverImage,
+  aiSummary,
   onOpenAiPlanner,
   onAddActivity,
   onOpenInviteModal,
   onVoteAgain,
   onOpenFullscreenMap,
   onOptimizeRoute,
+  onResetTrip,
 }) => {
   const [selectedActivityForDetails, setSelectedActivityForDetails] = useState<TimelineActivity | null>(null);
   const [shareToast, setShareToast] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  // If no trip has been generated yet, render ONLY the "Lập lịch trình bằng AI" view
+  if (!days || days.length === 0 || !activities || activities.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[68vh] px-4 text-center py-10">
+        <div className="w-20 h-20 rounded-3xl bg-gradient-to-tr from-sky-500 via-sky-600 to-orange-400 p-0.5 shadow-xl shadow-sky-500/20 mb-6 flex items-center justify-center animate-bounce duration-1000">
+          <div className="w-full h-full rounded-[22px] bg-white dark:bg-slate-900 flex items-center justify-center">
+            <Sparkles className="w-10 h-10 text-sky-600 dark:text-sky-400" />
+          </div>
+        </div>
+
+        <h2 className="text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight mb-2">
+          Chưa có lịch trình chuyến đi
+        </h2>
+        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-sm mb-8 leading-relaxed">
+          Hiện tại chưa có kế hoạch cụ thể. Hãy bấm nút bên dưới để AI ghi nhận các thông tin đầu vào và tự động tạo lịch trình hoàn chỉnh cho bạn!
+        </p>
+
+        <button
+          onClick={onOpenAiPlanner}
+          className="h-14 px-8 rounded-2xl bg-gradient-to-r from-sky-600 via-sky-700 to-orange-500 hover:opacity-95 text-white font-extrabold text-sm sm:text-base flex items-center gap-3 shadow-xl shadow-sky-600/30 active:scale-95 transition-all"
+        >
+          <Sparkles className="w-5 h-5 text-amber-200" />
+          <span>Lập lịch trình bằng AI</span>
+        </button>
+      </div>
+    );
+  }
 
   const currentActivities = activities.filter((a) => a.dayNumber === selectedDay);
 
@@ -77,7 +117,7 @@ export const ItineraryView: React.FC<ItineraryViewProps> = ({
         {/* Background photo */}
         <div className="absolute inset-0 bg-cover bg-center brightness-[0.72] contrast-[1.05]"
           style={{
-            backgroundImage: `url('https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?w=1200&auto=format&fit=crop&q=80')`
+            backgroundImage: `url('${tripCoverImage || 'https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?w=1200&auto=format&fit=crop&q=80'}')`
           }}
         />
         {/* Ambient Gradient overlay */}
@@ -87,7 +127,7 @@ export const ItineraryView: React.FC<ItineraryViewProps> = ({
           {/* Top badge and action icons */}
           <div className="flex items-center justify-between">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-600/90 backdrop-blur-md text-white text-xs font-bold shadow-sm tracking-wide">
-              <span>⏳</span> Còn 12 ngày nữa
+              <span>✨</span> Lịch trình AI cá nhân hóa
             </span>
             <div className="flex items-center gap-2">
               <button
@@ -110,10 +150,10 @@ export const ItineraryView: React.FC<ItineraryViewProps> = ({
           {/* Title & Dates */}
           <div className="my-2">
             <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white drop-shadow-md">
-              Chuyến đi Đà Nẵng – Hội An rực rỡ 🌊
+              {tripTitle || 'Chuyến đi Đà Nẵng – Hội An rực rỡ 🌊'}
             </h1>
             <p className="text-xs sm:text-sm font-medium text-slate-200 mt-1 flex items-center gap-1.5 drop-shadow">
-              <span>📅</span> 15/04 – 18/04/2025 (4 ngày 3 đêm)
+              <span>📅</span> {tripDatesSummary || '15/04 – 18/04/2025 (4 ngày 3 đêm)'}
             </p>
           </div>
 
@@ -152,14 +192,31 @@ export const ItineraryView: React.FC<ItineraryViewProps> = ({
         </div>
       </div>
 
+      {/* AI Summary Banner if present */}
+      {aiSummary && (
+        <div className="mb-4 p-3.5 rounded-2xl bg-gradient-to-r from-sky-50 to-indigo-50 dark:from-sky-950/40 dark:to-indigo-950/30 border border-sky-200/80 dark:border-sky-800/60 flex items-start gap-3 shadow-sm">
+          <div className="w-8 h-8 rounded-xl bg-sky-600 text-white flex items-center justify-center flex-shrink-0 mt-0.5 shadow-sm">
+            <Sparkles className="w-4 h-4 text-cyan-200" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h4 className="text-xs font-black text-sky-900 dark:text-sky-200 uppercase tracking-wider mb-0.5">
+              Lời khuyên từ TripMate AI
+            </h4>
+            <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed font-medium">
+              {aiSummary}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* AI Planner & Route Optimization CTAs */}
-      <div className="grid grid-cols-2 gap-2.5 mb-5">
+      <div className="grid grid-cols-2 gap-2.5 mb-2.5">
         <button
           onClick={onOpenAiPlanner}
           className="h-12 px-3 rounded-2xl bg-gradient-to-r from-sky-600 to-sky-700 hover:from-sky-500 hover:to-sky-600 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-sky-600/20 active:scale-[0.98] transition-all"
         >
           <Sparkles className="w-4 h-4 text-cyan-200" />
-          <span>Lập lịch bằng AI</span>
+          <span>Lập lại lịch với AI</span>
         </button>
 
         <button
@@ -168,6 +225,17 @@ export const ItineraryView: React.FC<ItineraryViewProps> = ({
         >
           <Shuffle className="w-4 h-4 text-sky-600 dark:text-sky-400" />
           <span>Tối ưu tuyến</span>
+        </button>
+      </div>
+
+      {/* Clear/Delete Itinerary Button */}
+      <div className="mb-5">
+        <button
+          onClick={() => setShowDeleteConfirm(true)}
+          className="w-full h-11 px-3 rounded-2xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 border border-rose-200 dark:border-rose-900/50 active:scale-[0.98] transition-all shadow-xs"
+        >
+          <Trash2 className="w-4 h-4 text-rose-500" />
+          <span>Xóa lịch trình</span>
         </button>
       </div>
 
@@ -450,6 +518,20 @@ export const ItineraryView: React.FC<ItineraryViewProps> = ({
         </button>
       </div>
 
+      {/* Bottom Clear Itinerary Action */}
+      <div className="mt-4 mb-2 pt-4 border-t border-slate-200/80 dark:border-slate-800 text-center">
+        <button
+          onClick={() => setShowDeleteConfirm(true)}
+          className="w-full py-3 rounded-2xl bg-rose-50/80 hover:bg-rose-100 dark:bg-rose-950/30 dark:hover:bg-rose-900/50 text-rose-600 dark:text-rose-400 font-bold text-xs flex items-center justify-center gap-2 border border-rose-200/90 dark:border-rose-900/40 transition-all active:scale-[0.99]"
+        >
+          <Trash2 className="w-4 h-4 text-rose-500" />
+          <span>Xóa toàn bộ lịch trình này</span>
+        </button>
+        <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1.5">
+          Khôi phục về trạng thái ban đầu để tạo kế hoạch mới bằng AI
+        </p>
+      </div>
+
       {/* Activity Details Popup */}
       {selectedActivityForDetails && (
         <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in">
@@ -519,6 +601,40 @@ export const ItineraryView: React.FC<ItineraryViewProps> = ({
                 className="flex-1 py-3 rounded-xl bg-sky-700 hover:bg-sky-800 text-white font-bold text-xs shadow-md"
               >
                 Chỉnh sửa hoạt động
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Itinerary Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
+          <div className="w-full max-w-sm bg-white dark:bg-slate-900 rounded-3xl p-5 shadow-2xl border border-slate-200 dark:border-slate-800 text-center">
+            <div className="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 mx-auto flex items-center justify-center mb-3">
+              <Trash2 className="w-6 h-6" />
+            </div>
+            <h3 className="text-base font-black text-slate-900 dark:text-slate-100 mb-1.5">
+              Xác nhận xóa lịch trình?
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mb-5 leading-relaxed">
+              Toàn bộ các ngày và hoạt động đã tạo sẽ được dọn sạch. Tab Lịch trình sẽ quay về trạng thái ban đầu để bạn sẵn sàng tạo chuyến đi mới bất kỳ lúc nào.
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="flex-1 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs hover:bg-slate-200 dark:hover:bg-slate-750 transition-colors"
+              >
+                Giữ lại
+              </button>
+              <button
+                onClick={() => {
+                  setShowDeleteConfirm(false);
+                  onResetTrip?.();
+                }}
+                className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-md shadow-rose-600/20 active:scale-95 transition-all"
+              >
+                Xác nhận xóa
               </button>
             </div>
           </div>

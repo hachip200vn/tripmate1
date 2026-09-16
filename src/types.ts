@@ -9,6 +9,17 @@ export type TripDay = {
   activitiesCount: number;
 };
 
+export type TripPlanData = {
+  tripTitle: string;
+  destination: string;
+  datesSummary: string;
+  totalDays: number;
+  coverImage?: string;
+  days: TripDay[];
+  activities: TimelineActivity[];
+  aiSummary?: string;
+};
+
 export type TimelineActivity = {
   id: string;
   dayNumber: number;

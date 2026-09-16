@@ -12,19 +12,16 @@ import {
   Play,
   Check,
   PlaneTakeoff,
-  PlaneLanding
+  PlaneLanding,
+  MessageSquarePlus,
+  Loader2
 } from 'lucide-react';
+import { TripPlanData } from '../types';
 
 interface AiPlannerModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onApplyGeneratedPlan: (planConfig: {
-    destination: string;
-    membersCount: number;
-    budget: string;
-    vibes: string[];
-    pace: string;
-  }) => void;
+  onApplyGeneratedPlan: (plan: TripPlanData) => void;
 }
 
 export const AiPlannerModal: React.FC<AiPlannerModalProps> = ({
@@ -45,7 +42,10 @@ export const AiPlannerModal: React.FC<AiPlannerModalProps> = ({
     'Food tour ẩm thực',
   ]);
   const [pace, setPace] = useState<'relaxed' | 'balanced' | 'packed'>('balanced');
+  const [notes, setNotes] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generationStep, setGenerationStep] = useState('');
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [chimePlaying, setChimePlaying] = useState(false);
 
   const destinationChips = ['Đà Nẵng — Hội An', 'Phú Quốc', 'Đà Lạt', 'Hà Giang'];
@@ -98,26 +98,58 @@ export const AiPlannerModal: React.FC<AiPlannerModalProps> = ({
     }
   };
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     setIsGenerating(true);
-    playCrystalChime();
+    setErrorMsg(null);
+    setGenerationStep('Đang kết nối Gemini AI từ backend...');
 
-    setTimeout(() => {
-      setIsGenerating(false);
-      onApplyGeneratedPlan({
-        destination,
-        membersCount,
-        budget:
-          budgetTier === 'budget'
-            ? 'Tiết kiệm (~2-3tr)'
-            : budgetTier === 'standard'
-            ? 'Tiêu chuẩn (~4-5tr)'
-            : 'Sang chảnh (>8tr)',
-        vibes: selectedVibes,
-        pace,
+    const stepTimer = setInterval(() => {
+      setGenerationStep((prev) => {
+        if (prev.includes('kết nối')) return 'Đang phân tích điểm đến & tối ưu hóa tuyến đường...';
+        if (prev.includes('phân tích')) return 'Đang lên chi tiết mốc giờ, ẩm thực & chi phí nhóm...';
+        return 'Đang hoàn tất lịch trình thông minh...';
       });
-      onClose();
-    }, 1200);
+    }, 1800);
+
+    try {
+      const budgetLabel =
+        budgetTier === 'budget'
+          ? 'Tiết kiệm (~2-3tr/người)'
+          : budgetTier === 'standard'
+          ? 'Tiêu chuẩn (~4-5tr/người)'
+          : 'Sang chảnh (>8tr/người)';
+
+      const res = await fetch('/api/ai/plan-itinerary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          destination,
+          startDate,
+          endDate,
+          membersCount,
+          budget: budgetLabel,
+          vibes: selectedVibes,
+          pace,
+          notes,
+        }),
+      });
+
+      const json = await res.json();
+      if (json && json.data) {
+        playCrystalChime();
+        onApplyGeneratedPlan(json.data);
+        onClose();
+      } else {
+        throw new Error(json?.message || 'Không thể tạo lịch trình');
+      }
+    } catch (err) {
+      console.error('Lỗi khi gọi AI tạo lịch trình:', err);
+      setErrorMsg('Đã có sự cố khi kết nối AI. Vui lòng bấm thử lại!');
+    } finally {
+      clearInterval(stepTimer);
+      setIsGenerating(false);
+      setGenerationStep('');
+    }
   };
 
   return (
@@ -407,7 +439,25 @@ export const AiPlannerModal: React.FC<AiPlannerModalProps> = ({
             </div>
           </div>
 
-          {/* 7. Sound & Haptic Preview */}
+          {/* 7. Notes & Special Requests */}
+          <div className="bg-slate-50 dark:bg-slate-800/60 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700">
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                <MessageSquarePlus className="w-4 h-4 text-sky-600" />
+                Ghi chú & Yêu cầu đặc biệt cho AI
+              </label>
+              <span className="text-[10px] text-slate-400">Không bắt buộc</span>
+            </div>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="VD: Muốn ăn hải sản tươi ngon giá hợp lý, thích ngắm hoàng hôn và cafe chill, nhóm có người thích chụp ảnh..."
+              rows={2}
+              className="w-full p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-800 dark:text-slate-100 placeholder:text-slate-400 outline-none resize-none focus:ring-2 focus:ring-sky-500/20"
+            />
+          </div>
+
+          {/* 8. Sound & Haptic Preview */}
           <div className="bg-sky-50 dark:bg-slate-800 p-3 rounded-2xl border border-sky-200 dark:border-slate-700 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-sky-600 text-white flex items-center justify-center">
@@ -434,15 +484,50 @@ export const AiPlannerModal: React.FC<AiPlannerModalProps> = ({
           </div>
         </div>
 
+        {/* Error Message */}
+        {errorMsg && (
+          <div className="mt-4 p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 text-rose-600 dark:text-rose-400 text-xs font-semibold flex items-center justify-between">
+            <span>{errorMsg}</span>
+            <button
+              onClick={handleGenerate}
+              className="px-2.5 py-1 rounded-lg bg-rose-600 text-white text-[11px] font-bold"
+            >
+              Thử lại
+            </button>
+          </div>
+        )}
+
+        {/* Real-time Generation Progress */}
+        {isGenerating && (
+          <div className="mt-4 p-3.5 rounded-2xl bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800/60 animate-pulse">
+            <div className="flex items-center gap-2.5 text-xs font-bold text-sky-700 dark:text-sky-300">
+              <Loader2 className="w-4 h-4 animate-spin text-sky-600 dark:text-sky-400" />
+              <span>{generationStep || 'AI đang xử lý yêu cầu...'}</span>
+            </div>
+            <div className="w-full h-1.5 bg-sky-200/60 dark:bg-sky-900/60 rounded-full mt-2 overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-sky-500 to-orange-500 rounded-full animate-indeterminate" />
+            </div>
+          </div>
+        )}
+
         {/* Generate CTA Button */}
         <div className="mt-5 pt-3 border-t border-slate-100 dark:border-slate-800">
           <button
             onClick={handleGenerate}
             disabled={isGenerating}
-            className="w-full h-13 rounded-2xl bg-gradient-to-r from-sky-600 via-sky-700 to-orange-500 hover:opacity-95 text-white font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg shadow-sky-600/25 active:scale-[0.98] transition-all disabled:opacity-50"
+            className="w-full h-13 rounded-2xl bg-gradient-to-r from-sky-600 via-sky-700 to-orange-500 hover:opacity-95 text-white font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg shadow-sky-600/25 active:scale-[0.98] transition-all disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed"
           >
-            <Sparkles className={`w-5 h-5 text-cyan-200 ${isGenerating ? 'animate-spin' : ''}`} />
-            <span>{isGenerating ? 'AI đang phân tích & lên lịch...' : 'Tạo lịch trình tự động bằng AI'}</span>
+            {isGenerating ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin text-white" />
+                <span>AI đang phân tích & lên lịch trình...</span>
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-5 h-5 text-cyan-200" />
+                <span>Tạo lịch trình tự động bằng AI</span>
+              </>
+            )}
           </button>
 
           <p className="text-[10px] text-center text-slate-400 mt-2">

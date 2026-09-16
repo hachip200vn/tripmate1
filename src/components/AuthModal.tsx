@@ -27,9 +27,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   if (!isOpen) return null;
 
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
-  const [email, setEmail] = useState('nam.tran@tripmate.vn');
-  const [password, setPassword] = useState('TripMate2024!');
-  const [fullName, setFullName] = useState('Trần Nhật Nam');
+  const [email, setEmail] = useState('nguyenviethung.co@gmail.com');
+  const [password, setPassword] = useState('TripMate2025!');
+  const [fullName, setFullName] = useState('Nguyễn Việt Hùng');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [isLoading, setIsLoading] = useState(false);

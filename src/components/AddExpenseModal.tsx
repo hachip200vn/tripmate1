@@ -24,7 +24,7 @@ export const AddExpenseModal: React.FC<AddExpenseModalProps> = ({
 
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState<number>(350000);
-  const [paidByName, setPaidByName] = useState(members[0]?.name || 'Trần Nhật Nam');
+  const [paidByName, setPaidByName] = useState(members[0]?.name || 'Nguyễn Việt Hùng');
   const [splitCount, setSplitCount] = useState<number>(members.length || 5);
 
   const handleSubmit = (e: React.FormEvent) => {

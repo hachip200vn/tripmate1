@@ -3,10 +3,10 @@ import { TripDay, TimelineActivity, NotificationItem, VotePoll, ExpenseItem, Mem
 export const initialMembers: Member[] = [
   {
     id: 'm1',
-    name: 'Trần Nhật Nam',
+    name: 'Nguyễn Việt Hùng',
     role: 'Trưởng nhóm',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-    initials: 'TN',
+    initials: 'VH',
     isHost: true,
     phone: '0987 654 321',
     paidAmount: 2450000,
@@ -296,7 +296,7 @@ export const initialPolls: VotePoll[] = [
         priceText: '~350.000đ/người',
         votes: 3,
         votedByMe: true,
-        voterAvatars: ['TN', 'NL', 'KH']
+        voterAvatars: ['VH', 'NL', 'KH']
       },
       {
         id: 'opt-102',
@@ -321,7 +321,7 @@ export const initialPolls: VotePoll[] = [
   {
     id: 'poll-2',
     title: 'Lựa chọn khung giờ đi thuyền thả hoa đăng Hội An',
-    creator: 'Trần Nhật Nam',
+    creator: 'Nguyễn Việt Hùng',
     deadline: '20:00 ngày 16/04',
     category: 'Trải nghiệm sông Hoài',
     status: 'active',
@@ -333,7 +333,7 @@ export const initialPolls: VotePoll[] = [
         priceText: '100.000đ/thuyền (4 người)',
         votes: 4,
         votedByMe: true,
-        voterAvatars: ['TN', 'MA', 'KH', 'NL']
+        voterAvatars: ['VH', 'MA', 'KH', 'NL']
       },
       {
         id: 'opt-202',
@@ -355,8 +355,8 @@ export const initialExpenses: ExpenseItem[] = [
     category: 'ticket',
     amount: 4500000,
     paidBy: 'm1',
-    paidByName: 'Trần Nhật Nam',
-    paidByAvatar: 'TN',
+    paidByName: 'Nguyễn Việt Hùng',
+    paidByAvatar: 'VH',
     splitWithCount: 5,
     date: '16/04/2025'
   },
@@ -388,8 +388,8 @@ export const initialExpenses: ExpenseItem[] = [
     category: 'stay',
     amount: 2000000,
     paidBy: 'm1',
-    paidByName: 'Trần Nhật Nam',
-    paidByAvatar: 'TN',
+    paidByName: 'Nguyễn Việt Hùng',
+    paidByAvatar: 'VH',
     splitWithCount: 5,
     date: '14/04/2025'
   }

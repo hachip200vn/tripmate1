@@ -27,7 +27,7 @@ import {
   initialExpenses,
   exploreSpots,
 } from './data/tripData';
-import { NavTab, TimelineActivity, VotePoll, ExpenseItem, NotificationItem } from './types';
+import { NavTab, TimelineActivity, TripDay, TripPlanData, VotePoll, ExpenseItem, NotificationItem } from './types';
 import { CheckCircle2 } from 'lucide-react';
 
 export default function App() {
@@ -37,14 +37,21 @@ export default function App() {
     return localStorage.getItem('tripmate_theme') === 'dark';
   });
 
-  // Trip and Views state
-  const [selectedDayNumber, setSelectedDayNumber] = useState<number>(2); // Default to Day 2 (Bà Nà & Biển Mỹ Khê)
-  const [activities, setActivities] = useState<TimelineActivity[]>(initialTimelineActivities);
+  // User Profile information
+  const [userName, setUserName] = useState('Nguyễn Việt Hùng');
+  const [userEmail, setUserEmail] = useState('nguyenviethung.co@gmail.com');
+  const [userPhone, setUserPhone] = useState('0987 654 321');
+
+  // Trip and Views state - Initially empty itinerary as requested by user
+  const [tripPlan, setTripPlan] = useState<TripPlanData | null>(null);
+  const [tripDays, setTripDays] = useState<TripDay[]>([]);
+  const [activities, setActivities] = useState<TimelineActivity[]>([]);
+  const [selectedDayNumber, setSelectedDayNumber] = useState<number>(1);
+
   const [polls, setPolls] = useState<VotePoll[]>(initialPolls);
   const [expenses, setExpenses] = useState<ExpenseItem[]>(initialExpenses);
   const [members, setMembers] = useState(initialMembers);
   const [notifications, setNotifications] = useState<NotificationItem[]>(initialNotifications);
-  const [userPhone, setUserPhone] = useState('0987 654 321');
 
   // Modals state
   const [showUtilitiesModal, setShowUtilitiesModal] = useState(false);
@@ -73,20 +80,41 @@ export default function App() {
   useEffect(() => {
     if (darkMode) {
       document.documentElement.classList.add('dark');
+      document.body.classList.add('dark');
       localStorage.setItem('tripmate_theme', 'dark');
     } else {
       document.documentElement.classList.remove('dark');
+      document.body.classList.remove('dark');
       localStorage.setItem('tripmate_theme', 'light');
     }
   }, [darkMode]);
 
-  const toggleDarkMode = () => setDarkMode((prev) => !prev);
+  const toggleDarkMode = () => {
+    setDarkMode((prev) => {
+      const next = !prev;
+      showToast(next ? 'Đã bật chế độ Tối (Dark Mode) 🌙' : 'Đã chuyển giao diện Sáng ☀️');
+      return next;
+    });
+  };
 
   // Add Spot To Itinerary from Explore View
   const handleAddSpotToItinerary = (spot: typeof exploreSpots[0]) => {
+    // If no days yet, initialize Day 1
+    if (tripDays.length === 0) {
+      const defaultDay: TripDay = {
+        dayNumber: 1,
+        date: 'Hôm nay',
+        displayDate: 'Ngày 1',
+        title: 'Khởi hành & Khám phá',
+        activitiesCount: 1,
+      };
+      setTripDays([defaultDay]);
+      setSelectedDayNumber(1);
+    }
+
     const newAct: TimelineActivity = {
       id: `act-${Date.now()}`,
-      dayNumber: selectedDayNumber,
+      dayNumber: tripDays.length === 0 ? 1 : selectedDayNumber,
       time: '16:00',
       category: spot.category,
       title: spot.name,
@@ -98,7 +126,7 @@ export default function App() {
       details: spot.tip,
     };
     setActivities((prev) => [...prev, newAct]);
-    showToast(`Đã thêm "${spot.name}" vào lịch trình Ngày ${selectedDayNumber}!`);
+    showToast(`Đã thêm "${spot.name}" vào lịch trình Ngày ${tripDays.length === 0 ? 1 : selectedDayNumber}!`);
   };
 
   // Vote on option in Poll
@@ -116,8 +144,8 @@ export default function App() {
                 votes: Math.max(0, nextVotes),
                 votedByMe: !opt.votedByMe,
                 voterAvatars: opt.votedByMe
-                  ? opt.voterAvatars.filter((a) => a !== 'TN')
-                  : [...opt.voterAvatars, 'TN'],
+                  ? opt.voterAvatars.filter((a) => a !== 'VH')
+                  : [...opt.voterAvatars, 'VH'],
               };
             }
             return opt;
@@ -133,7 +161,7 @@ export default function App() {
     const newPoll: VotePoll = {
       id: `poll-${Date.now()}`,
       title: 'Chọn điểm ngắm pháo hoa Quốc tế DIFF tối nay',
-      creator: 'Trần Nhật Nam',
+      creator: 'Nguyễn Việt Hùng',
       deadline: '19:00 hôm nay',
       category: 'Sự kiện đặc biệt',
       status: 'active',
@@ -145,7 +173,7 @@ export default function App() {
           priceText: '300.000đ/vé',
           votes: 1,
           votedByMe: true,
-          voterAvatars: ['TN'],
+          voterAvatars: ['VH'],
         },
         {
           id: `opt-${Date.now()}-2`,
@@ -241,11 +269,15 @@ export default function App() {
                 transition={{ duration: 0.2, ease: 'easeInOut' }}
               >
                 <ItineraryView
-                  days={initialDays}
+                  days={tripDays}
                   selectedDay={selectedDayNumber}
                   onSelectDay={setSelectedDayNumber}
                   activities={activities}
                   members={members}
+                  tripTitle={tripPlan?.tripTitle}
+                  tripDatesSummary={tripPlan?.datesSummary}
+                  tripCoverImage={tripPlan?.coverImage}
+                  aiSummary={tripPlan?.aiSummary}
                   onOpenAiPlanner={() => setShowAiPlannerModal(true)}
                   onAddActivity={handleAddActivity}
                   onOpenInviteModal={() =>
@@ -259,6 +291,13 @@ export default function App() {
                     showToast('Bản đồ toàn màn hình cùng định vị GPS');
                   }}
                   onOptimizeRoute={handleOptimizeRoute}
+                  onResetTrip={() => {
+                    setTripPlan(null);
+                    setTripDays([]);
+                    setActivities([]);
+                    setSelectedDayNumber(1);
+                    showToast('Đã làm mới lại lịch trình!');
+                  }}
                 />
               </motion.div>
             )}
@@ -326,6 +365,8 @@ export default function App() {
                 transition={{ duration: 0.2, ease: 'easeInOut' }}
               >
                 <ProfileView
+                  userName={userName}
+                  userEmail={userEmail}
                   userPhone={userPhone}
                   darkMode={darkMode}
                   onToggleDarkMode={toggleDarkMode}
@@ -373,8 +414,12 @@ export default function App() {
           isOpen={showAiPlannerModal}
           onClose={() => setShowAiPlannerModal(false)}
           onApplyGeneratedPlan={(plan) => {
-            showToast(`AI đã đồng bộ lịch trình tối ưu cho "${plan.destination}"!`);
+            setTripPlan(plan);
+            setTripDays(plan.days);
+            setActivities(plan.activities);
+            setSelectedDayNumber(1);
             setCurrentTab('lich-trinh');
+            showToast(`AI đã lập lịch trình hoàn tất: ${plan.tripTitle}! 🎉`);
           }}
         />
 

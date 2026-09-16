@@ -18,6 +18,8 @@ import {
 } from 'lucide-react';
 
 interface ProfileViewProps {
+  userName?: string;
+  userEmail?: string;
   userPhone: string;
   darkMode: boolean;
   onToggleDarkMode: () => void;
@@ -29,6 +31,8 @@ interface ProfileViewProps {
 }
 
 export const ProfileView: React.FC<ProfileViewProps> = ({
+  userName = 'Nguyễn Việt Hùng',
+  userEmail = 'nguyenviethung.co@gmail.com',
   userPhone,
   darkMode,
   onToggleDarkMode,
@@ -45,7 +49,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         <div className="relative w-16 h-16 rounded-full overflow-hidden flex-shrink-0 ring-4 ring-sky-100 dark:ring-slate-700">
           <img
             src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80"
-            alt="Nam Tran"
+            alt={userName}
             className="w-full h-full object-cover"
           />
         </div>
@@ -53,12 +57,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
             <h2 className="font-extrabold text-base sm:text-lg text-slate-900 dark:text-slate-100 truncate">
-              Trần Nhật Nam
+              {userName}
             </h2>
             <ShieldCheck className="w-4 h-4 text-sky-600 flex-shrink-0" />
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
-            nam.tran@tripmate.vn
+            {userEmail}
           </p>
 
           <div className="flex items-center gap-2 mt-2">
@@ -130,7 +134,7 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
                 <p className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200">
                   Email
                 </p>
-                <p className="text-[11px] text-slate-400">nam.tran@tripmate.vn</p>
+                <p className="text-[11px] text-slate-400">{userEmail}</p>
               </div>
             </div>
             <span className="text-[11px] font-bold text-emerald-600 px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40">
