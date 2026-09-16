@@ -98,7 +98,14 @@ export default function App() {
   };
 
   // Add Spot To Itinerary from Explore View
-  const handleAddSpotToItinerary = (spot: typeof exploreSpots[0]) => {
+  const handleAddSpotToItinerary = (spot: {
+    id: string;
+    name: string;
+    category: string;
+    address: string;
+    priceText: string;
+    tip: string;
+  }) => {
     // If no days yet, initialize Day 1
     if (tripDays.length === 0) {
       const defaultDay: TripDay = {
@@ -311,11 +318,17 @@ export default function App() {
                 transition={{ duration: 0.2, ease: 'easeInOut' }}
               >
                 <ExploreView
+                  currentDestination={tripPlan?.destination}
                   onOpenReviewModal={(spotName) => {
                     setReviewSpotName(spotName);
                     setShowReviewModal(true);
                   }}
                   onAddSpotToItinerary={handleAddSpotToItinerary}
+                  onSwitchToItinerary={() => setCurrentTab('lich-trinh')}
+                  onOpenAiPlanner={() => {
+                    setCurrentTab('lich-trinh');
+                    setShowAiPlannerModal(true);
+                  }}
                 />
               </motion.div>
             )}
