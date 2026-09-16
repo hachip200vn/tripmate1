@@ -752,6 +752,280 @@ export function generatePrototypeTripPlan(options: GeneratePlanOptions = {}): Tr
     };
   }
 
+  // HÀ NỘI
+  if (lower.includes('hà nội') || lower.includes('ha noi')) {
+    const days: TripDay[] = [
+      { dayNumber: 1, date: options.startDate || '2025-10-10', displayDate: '10/10', title: 'Hồ Hoàn Kiếm & 36 Phố Phường', activitiesCount: 4 },
+      { dayNumber: 2, date: '2025-10-11', displayDate: '11/10', title: 'Lăng Bác, Hoàng Thành & Văn Miếu', activitiesCount: 4 },
+      { dayNumber: 3, date: '2025-10-12', displayDate: '12/10', title: 'Hoàng hôn Hồ Tây & Cafe Giảng', activitiesCount: 3 },
+      { dayNumber: 4, date: options.endDate || '2025-10-13', displayDate: '13/10', title: 'Cốm Làng Vòng & Mua quà thủ đô', activitiesCount: 2 }
+    ];
+    const activities: TimelineActivity[] = [
+      {
+        id: 'hn-101',
+        dayNumber: 1,
+        time: '09:00',
+        category: 'Đến nơi & Nhận phòng',
+        title: 'Check-in Khách sạn Phố Cổ Boutique',
+        location: 'Hàng Bè, Hoàn Kiếm, Hà Nội',
+        costText: 'Đã đặt phòng',
+        statusText: 'Đã nhận phòng',
+        statusType: 'booked',
+        iconType: 'landmark',
+        details: 'Khách sạn phong cách kiến trúc Đông Dương giữa lòng phố cổ'
+      },
+      {
+        id: 'hn-102',
+        dayNumber: 1,
+        time: '11:30',
+        category: 'Ẩm thực trưa',
+        title: 'Bún chả Hương Liên (Bún chả Obama)',
+        location: '24 Lê Văn Hưu, Hai Bà Trưng',
+        costText: '~60.000đ/suất',
+        statusText: 'Đã duyệt',
+        statusType: 'approved',
+        iconType: 'food',
+        details: 'Bún chả thịt nướng than hoa thơm lừng và nem hải sản giòn rụm'
+      },
+      {
+        id: 'hn-103',
+        dayNumber: 1,
+        time: '15:00',
+        category: 'Danh thắng & Check-in',
+        title: 'Dạo quanh Hồ Gươm, Cầu Thê Húc & Đền Ngọc Sơn',
+        location: 'Đinh Tiên Hoàng, Hoàn Kiếm',
+        costText: '30.000đ vé đền',
+        statusText: 'Đã duyệt',
+        statusType: 'approved',
+        iconType: 'landmark',
+        details: 'Cầu Thê Húc cong cong màu son và kem Tràng Tiền thơm mát'
+      },
+      {
+        id: 'hn-104',
+        dayNumber: 1,
+        time: '19:30',
+        category: 'Đêm & Cà phê',
+        title: 'Cà phê trứng Đinh & Phố bia Tạ Hiện',
+        location: '13 Đinh Tiên Hoàng & Tạ Hiện',
+        costText: '~100.000đ/người',
+        statusText: 'Đã chốt',
+        statusType: 'voted',
+        iconType: 'night',
+        details: 'Ly cà phê trứng ngậy béo ngắm trọn Hồ Gươm lung linh ánh đèn'
+      }
+    ];
+
+    return {
+      tripTitle: 'Hà Nội Mùa Thu — Dấu Ấn Nghìn Năm Văn Hiến 🍂🏛️',
+      destination: 'Hà Nội',
+      datesSummary: options.startDate && options.endDate ? `${options.startDate} – ${options.endDate} (4 ngày 3 đêm)` : '10/10 – 13/10/2025 (4 ngày 3 đêm)',
+      totalDays: 4,
+      coverImage: 'https://images.unsplash.com/photo-1509062522246-3755977927d7?w=1200&auto=format&fit=crop&q=80',
+      days,
+      activities,
+      aiSummary: 'Lịch trình được sắp xếp tối ưu để dạo bộ phố cổ, trải nghiệm ẩm thực di sản và tận hưởng trọn vẹn tiết trời thu se lạnh tuyệt đẹp của thủ đô!'
+    };
+  }
+
+  // SA PA
+  if (lower.includes('sa pa') || lower.includes('sapa') || lower.includes('fansipan')) {
+    const days: TripDay[] = [
+      { dayNumber: 1, date: options.startDate || '2025-11-01', displayDate: '01/11', title: 'Lên Sa Pa sương mù & Bản Cát Cát', activitiesCount: 3 },
+      { dayNumber: 2, date: '2025-11-02', displayDate: '02/11', title: 'Chinh phục Đỉnh Fansipan 3.143m', activitiesCount: 3 },
+      { dayNumber: 3, date: '2025-11-03', displayDate: '03/11', title: 'Cổng trời Đèo Ô Quy Hồ & Thác Bạc', activitiesCount: 3 },
+      { dayNumber: 4, date: options.endDate || '2025-11-04', displayDate: '04/11', title: 'Chợ Sa Pa & Mua đặc sản hạt dẻ', activitiesCount: 2 }
+    ];
+    const activities: TimelineActivity[] = [
+      {
+        id: 'sp-101',
+        dayNumber: 1,
+        time: '12:00',
+        category: 'Đến nơi',
+        title: 'Check-in Ecolodge view thung lũng Mường Hoa',
+        location: 'Bản Mường Hoa, Sa Pa',
+        costText: 'Đã đặt phòng',
+        statusText: 'Đã cọc',
+        statusType: 'booked',
+        iconType: 'landmark',
+        details: 'Bungalow nhìn thẳng ra thung lũng mây trôi bồng bềnh'
+      },
+      {
+        id: 'sp-102',
+        dayNumber: 1,
+        time: '14:30',
+        category: 'Văn hóa bản làng',
+        title: 'Dạo chơi Bản Cát Cát & Suối Hoa',
+        location: 'Bản Cát Cát, Sa Pa',
+        costText: '150.000đ vé vào cổng',
+        statusText: 'Đã duyệt',
+        statusType: 'approved',
+        iconType: 'landmark',
+        details: 'Thuê trang phục thổ cẩm dân tộc H’Mông check-in bánh xe nước'
+      },
+      {
+        id: 'sp-103',
+        dayNumber: 1,
+        time: '19:00',
+        category: 'Ẩm thực phố núi',
+        title: 'Lẩu cá hồi & cá tầm Sa Pa nóng hổi',
+        location: 'Đường Xuân Viên, Thị xã Sa Pa',
+        costText: '~180.000đ/người',
+        statusText: '5/5 đồng ý',
+        statusType: 'voted',
+        iconType: 'food',
+        details: 'Thịt cá hồi tươi nhúng lẩu măng chua cay xé lưỡi ấm lòng đêm lạnh'
+      }
+    ];
+
+    return {
+      tripTitle: 'Hành Trình Sa Pa — Nóc Nhà Đông Dương & Biển Mây 🏔️☁️',
+      destination: 'Sa Pa, Lào Cai',
+      datesSummary: options.startDate && options.endDate ? `${options.startDate} – ${options.endDate} (4 ngày 3 đêm)` : '01/11 – 04/11/2025 (4 ngày 3 đêm)',
+      totalDays: 4,
+      coverImage: 'https://images.unsplash.com/photo-1528127269322-539801943592?w=1200&auto=format&fit=crop&q=80',
+      days,
+      activities,
+      aiSummary: 'Thời tiết Sa Pa thay đổi 4 mùa trong 1 ngày, AI đã tính toán khung giờ săn mây đỉnh Fansipan đẹp nhất lúc 9:30 - 11:30 sáng!'
+    };
+  }
+
+  // NHA TRANG
+  if (lower.includes('nha trang') || lower.includes('khánh hòa')) {
+    const days: TripDay[] = [
+      { dayNumber: 1, date: options.startDate || '2025-07-05', displayDate: '05/07', title: 'Hạ cánh biển xanh & Tháp Bà Ponagar', activitiesCount: 3 },
+      { dayNumber: 2, date: '2025-07-06', displayDate: '06/07', title: 'Tour 3 Đảo Lặn San Hô & Hòn Tằm', activitiesCount: 4 },
+      { dayNumber: 3, date: '2025-07-07', displayDate: '07/07', title: 'Vui chơi bùng nổ VinWonders Nha Trang', activitiesCount: 3 },
+      { dayNumber: 4, date: options.endDate || '2025-07-08', displayDate: '08/07', title: 'Tắm bùn khoáng & Nem nướng Ninh Hòa', activitiesCount: 2 }
+    ];
+    const activities: TimelineActivity[] = [
+      {
+        id: 'nt-101',
+        dayNumber: 1,
+        time: '11:00',
+        category: 'Khách sạn & Nghỉ ngơi',
+        title: 'Nhận phòng Khách sạn mặt biển Trần Phú',
+        location: 'Đường Trần Phú, Lộc Thọ, Nha Trang',
+        costText: 'Đã thanh toán',
+        statusText: 'Đã nhận',
+        statusType: 'booked',
+        iconType: 'landmark',
+        details: 'Phòng hướng trọn vẹn vịnh biển Nha Trang trong xanh cát trắng'
+      },
+      {
+        id: 'nt-102',
+        dayNumber: 1,
+        time: '12:30',
+        category: 'Ẩm thực trưa',
+        title: 'Nem nướng Đặng Văn Quyên',
+        location: '16A Lãn Ông, Xương Huân',
+        costText: '~65.000đ/phần',
+        statusText: 'Đã duyệt',
+        statusType: 'approved',
+        iconType: 'food',
+        details: 'Đặc sản nem nướng lụi cuốn bánh tráng rau sống chấm sốt tương nếp'
+      },
+      {
+        id: 'nt-103',
+        dayNumber: 1,
+        time: '16:00',
+        category: 'Di tích & Tâm linh',
+        title: 'Quần thể Tháp Bà Ponagar huyền bí',
+        location: 'Đường 2/4, Vĩnh Phước',
+        costText: '30.000đ vé vào',
+        statusText: 'Đã duyệt',
+        statusType: 'approved',
+        iconType: 'landmark',
+        details: 'Kiến trúc Chăm Pa cổ đại uy nghi bên cửa sông Cái thơ mộng'
+      }
+    ];
+
+    return {
+      tripTitle: 'Nha Trang Biển Xanh — Thiên Đường Vịnh Ngọc 🌊🏝️',
+      destination: 'Nha Trang, Khánh Hòa',
+      datesSummary: options.startDate && options.endDate ? `${options.startDate} – ${options.endDate} (4 ngày 3 đêm)` : '05/07 – 08/07/2025 (4 ngày 3 đêm)',
+      totalDays: 4,
+      coverImage: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=1200&auto=format&fit=crop&q=80',
+      days,
+      activities,
+      aiSummary: 'Lịch trình cân bằng giữa nghỉ dưỡng biển cao cấp, lặn ngắm san hô rực rỡ và khám phá ẩm thực hải sản tươi sống trứ danh Nha Trang!'
+    };
+  }
+
+  // ĐIỂM ĐẾN TỔNG QUÁT BẤT KỲ TRONG 63 TỈNH THÀNH (NẾU KHÔNG PHẢI ĐÀ NẴNG)
+  if (!lower.includes('đà nẵng') && !lower.includes('da nang') && !lower.includes('hội an') && dest !== 'Đà Nẵng — Hội An') {
+    const days: TripDay[] = [
+      { dayNumber: 1, date: options.startDate || '2025-08-15', displayDate: '15/08', title: `Đến ${dest} & Nhận phòng`, activitiesCount: 3 },
+      { dayNumber: 2, date: '2025-08-16', displayDate: '16/08', title: `Khám phá các danh thắng nổi tiếng tại ${dest}`, activitiesCount: 4 },
+      { dayNumber: 3, date: '2025-08-17', displayDate: '17/08', title: `Trải nghiệm văn hóa & Ẩm thực bản địa ${dest}`, activitiesCount: 3 },
+      { dayNumber: 4, date: options.endDate || '2025-08-18', displayDate: '18/08', title: `Check-in lưu niệm & Tạm biệt ${dest}`, activitiesCount: 2 }
+    ];
+    const activities: TimelineActivity[] = [
+      {
+        id: 'cust-101',
+        dayNumber: 1,
+        time: '10:00',
+        category: 'Di chuyển & Đến nơi',
+        title: `Có mặt tại trung tâm ${dest}`,
+        location: `Trung tâm ${dest}`,
+        costText: 'Đã hoàn tất',
+        statusText: 'Đúng giờ',
+        statusType: 'transport',
+        iconType: 'transport',
+        details: `Di chuyển thuận tiện, sẵn sàng cho hành trình khám phá ${dest}`
+      },
+      {
+        id: 'cust-102',
+        dayNumber: 1,
+        time: '12:00',
+        category: 'Ẩm thực trưa',
+        title: `Thưởng thức đặc sản vùng miền ${dest}`,
+        location: `Quán ăn truyền thống tại ${dest}`,
+        costText: '~70.000đ/người',
+        statusText: 'Đã duyệt',
+        statusType: 'approved',
+        iconType: 'food',
+        details: `Ẩm thực đặc trưng mang đậm phong vị bản xứ ${dest}`
+      },
+      {
+        id: 'cust-103',
+        dayNumber: 1,
+        time: '14:30',
+        category: 'Lưu trú',
+        title: `Check-in khách sạn trung tâm ${dest}`,
+        location: `Khu vực trung tâm ${dest}`,
+        costText: 'Đã đặt phòng',
+        statusText: 'Đã nhận phòng',
+        statusType: 'booked',
+        iconType: 'landmark',
+        details: 'Vị trí thuận tiện di chuyển tới các điểm vui chơi check-in'
+      },
+      {
+        id: 'cust-104',
+        dayNumber: 1,
+        time: '17:30',
+        category: 'Ngắm cảnh & Hoàng hôn',
+        title: `Check-in hoàng hôn tuyệt đẹp tại ${dest}`,
+        location: `Điểm ngắm cảnh biểu tượng của ${dest}`,
+        costText: 'Miễn phí',
+        statusText: '5/5 đồng ý',
+        statusType: 'voted',
+        iconType: 'beach',
+        details: `Khoảnh khắc chiều tà bình yên và góc chụp ảnh ấn tượng tại ${dest}`
+      }
+    ];
+
+    return {
+      tripTitle: `Hành Trình Khám Phá ${dest} — Bản Sắc Việt Nam 🌟✨`,
+      destination: dest,
+      datesSummary: options.startDate && options.endDate ? `${options.startDate} – ${options.endDate} (4 ngày 3 đêm)` : '15/08 – 18/08/2025 (4 ngày 3 đêm)',
+      totalDays: 4,
+      coverImage: 'https://images.unsplash.com/photo-1528127269322-539801943592?w=1200&auto=format&fit=crop&q=80',
+      days,
+      activities,
+      aiSummary: `Lịch trình được TripMate AI tính toán tối ưu riêng cho ${dest}, phối hợp nhịp nhàng giữa các danh lam thắng cảnh, văn hóa ẩm thực và thời gian nghỉ dưỡng của đoàn!`
+    };
+  }
+
   // DEFAULT / ĐÀ NẴNG — HỘI AN (Exact screen match with Day 2 details!)
   const days: TripDay[] = [
     { dayNumber: 1, date: options.startDate || '2025-04-15', displayDate: '15/04', title: 'Đến nơi & Nhận phòng', activitiesCount: 3 },

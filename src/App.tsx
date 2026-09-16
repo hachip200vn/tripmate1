@@ -408,6 +408,7 @@ export default function App() {
           onClose={() => setShowUtilitiesModal(false)}
           darkMode={darkMode}
           onToggleDarkMode={toggleDarkMode}
+          currentDestination={tripPlan?.destination}
         />
 
         <AiPlannerModal

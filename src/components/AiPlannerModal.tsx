@@ -14,10 +14,14 @@ import {
   PlaneTakeoff,
   PlaneLanding,
   MessageSquarePlus,
-  Loader2
+  Loader2,
+  Search,
+  Map,
+  Navigation
 } from 'lucide-react';
 import { TripPlanData } from '../types';
 import { generatePrototypeTripPlan } from '../data/tripData';
+import { searchDestinations, DestinationItem, POPULAR_DESTINATIONS } from '../data/vietnamDestinations';
 
 interface AiPlannerModalProps {
   isOpen: boolean;
@@ -33,6 +37,9 @@ export const AiPlannerModal: React.FC<AiPlannerModalProps> = ({
   if (!isOpen) return null;
 
   const [destination, setDestination] = useState('Đà Nẵng — Hội An');
+  const [isDestDropdownOpen, setIsDestDropdownOpen] = useState(false);
+  const destContainerRef = useRef<HTMLDivElement>(null);
+
   const [startDate, setStartDate] = useState('2025-04-15');
   const [endDate, setEndDate] = useState('2025-04-18');
   const [membersCount, setMembersCount] = useState(5);
@@ -50,6 +57,19 @@ export const AiPlannerModal: React.FC<AiPlannerModalProps> = ({
   const [chimePlaying, setChimePlaying] = useState(false);
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
+  // Close destination dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (destContainerRef.current && !destContainerRef.current.contains(event.target as Node)) {
+        setIsDestDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   useEffect(() => {
     return () => {
       timersRef.current.forEach(clearTimeout);
@@ -63,7 +83,25 @@ export const AiPlannerModal: React.FC<AiPlannerModalProps> = ({
     onClose();
   };
 
-  const destinationChips = ['Đà Nẵng — Hội An', 'Phú Quốc', 'Đà Lạt', 'Hà Giang'];
+  const destinationChips = [
+    'Đà Nẵng — Hội An',
+    'Hà Nội',
+    'Hà Giang',
+    'Phú Quốc',
+    'Đà Lạt',
+    'Sa Pa',
+    'Nha Trang',
+    'Huế'
+  ];
+
+  // Destination autocomplete suggestions
+  const suggestedDestinations: DestinationItem[] = React.useMemo(() => {
+    if (!destination.trim()) {
+      return POPULAR_DESTINATIONS;
+    }
+    const results = searchDestinations(destination);
+    return results.length > 0 ? results : POPULAR_DESTINATIONS.slice(0, 6);
+  }, [destination]);
 
   const allVibes = [
     { label: 'Nghỉ dưỡng & Biển', emoji: '⛱️' },
@@ -197,47 +235,154 @@ export const AiPlannerModal: React.FC<AiPlannerModalProps> = ({
 
         {/* Form Fields */}
         <div className="space-y-4">
-          {/* 1. Destination */}
-          <div className="bg-slate-50 dark:bg-slate-800/60 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700">
+          {/* 1. Destination with Google Maps & 63 Vietnam Provinces Autocomplete */}
+          <div
+            ref={destContainerRef}
+            className="bg-slate-50 dark:bg-slate-800/60 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 relative"
+          >
             <div className="flex items-center justify-between mb-2">
               <label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
                 <MapPin className="w-4 h-4 text-sky-600" />
                 Điểm đến bạn muốn tới
               </label>
-              <span className="text-[10px] font-bold text-sky-600 bg-sky-100 dark:bg-slate-700 px-2 py-0.5 rounded-full">
-                Đang chọn
-              </span>
+              <div className="flex items-center gap-1 text-[10px] font-bold text-sky-700 dark:text-sky-300 bg-sky-100 dark:bg-sky-950/60 px-2 py-0.5 rounded-full border border-sky-200 dark:border-sky-800/60">
+                <Map className="w-3 h-3 text-sky-600" />
+                <span>Bản đồ 63 tỉnh thành</span>
+              </div>
             </div>
 
             <div className="relative mb-2">
               <input
                 type="text"
                 value={destination}
-                onChange={(e) => setDestination(e.target.value)}
-                className="w-full h-11 pl-9 pr-8 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-bold text-xs text-slate-800 dark:text-slate-100 outline-none"
+                onFocus={() => setIsDestDropdownOpen(true)}
+                onChange={(e) => {
+                  setDestination(e.target.value);
+                  setIsDestDropdownOpen(true);
+                }}
+                placeholder="Nhập tên tỉnh thành (Ví dụ: H → Hà Nội, Hà Giang...)"
+                className="w-full h-11 pl-9 pr-8 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-bold text-xs text-slate-800 dark:text-slate-100 outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition-all shadow-sm"
               />
-              <MapPin className="w-4 h-4 absolute left-3 top-3.5 text-slate-400" />
+              <Search className="w-4 h-4 absolute left-3 top-3.5 text-slate-400" />
               {destination && (
                 <button
                   type="button"
-                  onClick={() => setDestination('')}
-                  className="absolute right-3 top-3 text-slate-400 hover:text-slate-600"
+                  onClick={() => {
+                    setDestination('');
+                    setIsDestDropdownOpen(true);
+                  }}
+                  className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 w-5 h-5 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"
                 >
                   ✕
                 </button>
               )}
+
+              {/* Autocomplete Dropdown Menu */}
+              {isDestDropdownOpen && (
+                <div className="absolute left-0 right-0 top-12 z-50 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden max-h-72 flex flex-col animate-in fade-in slide-in-from-top-1 duration-150">
+                  <div className="px-3 py-2 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                    <span className="flex items-center gap-1.5">
+                      <Navigation className="w-3 h-3 text-sky-600" />
+                      {destination.trim()
+                        ? `Gợi ý phù hợp "${destination}" (${suggestedDestinations.length})`
+                        : 'Địa điểm nổi bật phổ biến tại Việt Nam'}
+                    </span>
+                    <span className="text-[10px] text-slate-400">Nhấp để chọn</span>
+                  </div>
+
+                  <div className="overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/60">
+                    {suggestedDestinations.map((item) => {
+                      const regionColor =
+                        item.region === 'Miền Bắc'
+                          ? 'bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-950/50 dark:text-sky-300 dark:border-sky-800/50'
+                          : item.region === 'Miền Trung'
+                          ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800/50'
+                          : 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800/50';
+
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => {
+                            setDestination(item.name);
+                            setIsDestDropdownOpen(false);
+                          }}
+                          className={`w-full text-left px-3 py-2.5 hover:bg-sky-50/70 dark:hover:bg-slate-800 transition-colors flex items-start gap-2.5 ${
+                            destination.toLowerCase() === item.name.toLowerCase()
+                              ? 'bg-sky-50/50 dark:bg-slate-800/50'
+                              : ''
+                          }`}
+                        >
+                          <div className="w-7 h-7 rounded-lg bg-sky-100 dark:bg-slate-800 text-sky-600 dark:text-sky-400 flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <MapPin className="w-4 h-4" />
+                          </div>
+
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
+                                {item.name}
+                              </span>
+                              <span
+                                className={`text-[10px] font-semibold px-1.5 py-0.2 rounded border ${regionColor}`}
+                              >
+                                {item.region}
+                              </span>
+                            </div>
+
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                              {item.tag || item.description}
+                            </p>
+
+                            {item.popularSpots && item.popularSpots.length > 0 && (
+                              <div className="flex items-center gap-1 mt-1 flex-wrap">
+                                {item.popularSpots.slice(0, 3).map((spot, idx) => (
+                                  <span
+                                    key={idx}
+                                    className="text-[9px] bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-1.5 py-0.5 rounded font-medium"
+                                  >
+                                    📍 {spot}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+
+                    {destination.trim() && (
+                      <button
+                        type="button"
+                        onClick={() => setIsDestDropdownOpen(false)}
+                        className="w-full text-left px-3 py-2 bg-slate-50/60 dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-800 text-[11px] text-slate-600 dark:text-slate-300 flex items-center justify-between"
+                      >
+                        <span>
+                          Sử dụng điểm đến tùy chọn: <strong>&ldquo;{destination}&rdquo;</strong>
+                        </span>
+                        <span className="text-sky-600 dark:text-sky-400 font-bold text-[10px]">
+                          Xác nhận ↵
+                        </span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
+            {/* Quick Chips for Popular Destinations */}
             <div className="flex gap-1.5 flex-wrap">
               {destinationChips.map((chip) => (
                 <button
                   key={chip}
                   type="button"
-                  onClick={() => setDestination(chip)}
+                  onClick={() => {
+                    setDestination(chip);
+                    setIsDestDropdownOpen(false);
+                  }}
                   className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-colors ${
                     destination === chip
                       ? 'bg-sky-600 text-white shadow-sm'
-                      : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
+                      : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-sky-300'
                   }`}
                 >
                   {destination === chip && '✨ '}

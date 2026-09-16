@@ -6,9 +6,7 @@ import {
   CloudSun,
   CheckSquare,
   AlertTriangle,
-  Calculator,
   Volume2,
-  VolumeX,
   Play,
   Pause,
   Plus,
@@ -16,15 +14,21 @@ import {
   PhoneCall,
   Sun,
   Moon,
-  Sparkles,
-  Check
+  Check,
+  MapPin,
+  RefreshCw,
+  Compass,
+  Thermometer,
+  ShieldAlert
 } from 'lucide-react';
+import { getLocationUtility, LOCATION_UTILITIES_DATABASE } from '../data/locationUtilitiesData';
 
 interface UtilityDashboardModalProps {
   isOpen: boolean;
   onClose: () => void;
   darkMode: boolean;
   onToggleDarkMode: () => void;
+  currentDestination?: string;
 }
 
 export const UtilityDashboardModal: React.FC<UtilityDashboardModalProps> = ({
@@ -32,8 +36,22 @@ export const UtilityDashboardModal: React.FC<UtilityDashboardModalProps> = ({
   onClose,
   darkMode,
   onToggleDarkMode,
+  currentDestination,
 }) => {
   if (!isOpen) return null;
+
+  // Active destination (defaults to current active trip plan's destination)
+  const [activeLocation, setActiveLocation] = useState<string>(
+    currentDestination || 'Đà Nẵng — Hội An'
+  );
+
+  useEffect(() => {
+    if (currentDestination) {
+      setActiveLocation(currentDestination);
+    }
+  }, [currentDestination]);
+
+  const locationData = getLocationUtility(activeLocation);
 
   // 1. Currency Converter state
   const [vndAmount, setVndAmount] = useState<number>(1000000);
@@ -45,14 +63,14 @@ export const UtilityDashboardModal: React.FC<UtilityDashboardModalProps> = ({
     KRW: 18.5,
   };
 
-  // 2. Packing Checklist state
+  // 2. Packing Checklist state (adaptable)
   const [packingItems, setPackingItems] = useState([
-    { id: 1, text: 'CCCD / Hộ chiếu gốc', checked: true },
+    { id: 1, text: 'CCCD / Hộ chiếu gốc & bằng lái xe', checked: true },
     { id: 2, text: 'Kem chống nắng SPF 50+ & kính râm', checked: true },
-    { id: 3, text: 'Đồ bơi tắm biển Mỹ Khê', checked: true },
-    { id: 4, text: 'Áo khoác mỏng đi cáp treo Bà Nà', checked: false },
-    { id: 5, text: 'Sạc dự phòng & cáp điện thoại', checked: false },
-    { id: 6, text: 'Thuốc say xe & xịt chống muỗi', checked: false },
+    { id: 3, text: 'Đồ bơi / Trang phục check-in', checked: true },
+    { id: 4, text: 'Áo khoác gió & trang phục giữ ấm', checked: false },
+    { id: 5, text: 'Sạc dự phòng 20.000mAh & cáp điện thoại', checked: false },
+    { id: 6, text: 'Thuốc tiêu hóa, say xe & xịt chống muỗi', checked: false },
   ]);
   const [newItemText, setNewItemText] = useState('');
 
@@ -62,9 +80,8 @@ export const UtilityDashboardModal: React.FC<UtilityDashboardModalProps> = ({
   const [tipPercent, setTipPercent] = useState<number>(0);
 
   // 4. Ambient Sound Synthesizer via Web Audio API
-  const [playingTrack, setPlayingTrack] = useState<'waves' | 'rain' | 'night' | null>(null);
+  const [playingTrackId, setPlayingTrackId] = useState<string | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
-  const oscillatorRef = useRef<any>(null);
 
   const toggleCheck = (id: number) => {
     setPackingItems((prev) =>
@@ -86,15 +103,15 @@ export const UtilityDashboardModal: React.FC<UtilityDashboardModalProps> = ({
     setPackingItems((prev) => prev.filter((i) => i.id !== id));
   };
 
-  // Sound generator
-  const playSoundTrack = (type: 'waves' | 'rain' | 'night') => {
-    if (playingTrack === type) {
+  // Sound generator tailored to the track
+  const playSoundTrack = (track: { id: string; soundType: string }) => {
+    if (playingTrackId === track.id) {
       // stop
       if (audioCtxRef.current) {
         audioCtxRef.current.close();
         audioCtxRef.current = null;
       }
-      setPlayingTrack(null);
+      setPlayingTrackId(null);
       return;
     }
 
@@ -108,32 +125,63 @@ export const UtilityDashboardModal: React.FC<UtilityDashboardModalProps> = ({
       const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
       audioCtxRef.current = ctx;
 
-      // Soft ambient white noise buffer
       const bufferSize = ctx.sampleRate * 2;
       const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
       const output = buffer.getChannelData(0);
+
+      // Noise generation
       for (let i = 0; i < bufferSize; i++) {
         output[i] = Math.random() * 2 - 1;
       }
 
-      const whiteNoise = ctx.createBufferSource();
-      whiteNoise.buffer = buffer;
-      whiteNoise.loop = true;
+      const noiseSource = ctx.createBufferSource();
+      noiseSource.buffer = buffer;
+      noiseSource.loop = true;
 
-      // Filter
+      // Dynamic filter depending on ambient nature
       const filter = ctx.createBiquadFilter();
-      filter.type = type === 'waves' ? 'lowpass' : type === 'rain' ? 'bandpass' : 'notch';
-      filter.frequency.value = type === 'waves' ? 380 : type === 'rain' ? 850 : 1200;
-
       const gain = ctx.createGain();
-      gain.gain.value = 0.08;
 
-      whiteNoise.connect(filter);
+      switch (track.soundType) {
+        case 'waves':
+          filter.type = 'lowpass';
+          filter.frequency.value = 360;
+          gain.gain.value = 0.09;
+          break;
+        case 'rain':
+          filter.type = 'bandpass';
+          filter.frequency.value = 850;
+          gain.gain.value = 0.08;
+          break;
+        case 'wind':
+          filter.type = 'lowpass';
+          filter.frequency.value = 240;
+          gain.gain.value = 0.07;
+          break;
+        case 'fire':
+          filter.type = 'bandpass';
+          filter.frequency.value = 600;
+          gain.gain.value = 0.06;
+          break;
+        case 'stream':
+          filter.type = 'lowpass';
+          filter.frequency.value = 650;
+          gain.gain.value = 0.08;
+          break;
+        case 'night':
+        default:
+          filter.type = 'notch';
+          filter.frequency.value = 1100;
+          gain.gain.value = 0.07;
+          break;
+      }
+
+      noiseSource.connect(filter);
       filter.connect(gain);
       gain.connect(ctx.destination);
 
-      whiteNoise.start();
-      setPlayingTrack(type);
+      noiseSource.start();
+      setPlayingTrackId(track.id);
     } catch (e) {
       console.warn('Web Audio playback error', e);
     }
@@ -150,9 +198,20 @@ export const UtilityDashboardModal: React.FC<UtilityDashboardModalProps> = ({
   const totalWithTip = billTotal + (billTotal * tipPercent) / 100;
   const perPersonSplit = Math.round(totalWithTip / Math.max(1, peopleCount));
 
+  // Quick switch chips for testing locations
+  const popularPreviewLocations = [
+    'Đà Nẵng — Hội An',
+    'Đà Lạt',
+    'Phú Quốc',
+    'Hà Giang',
+    'Hà Nội',
+    'Sa Pa',
+    'Nha Trang',
+  ];
+
   return (
     <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in">
-      <div className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl p-5 shadow-2xl border border-slate-200 dark:border-slate-800 max-h-[88vh] overflow-y-auto flex flex-col">
+      <div className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl p-5 shadow-2xl border border-slate-200 dark:border-slate-800 max-h-[90vh] overflow-y-auto flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 mb-4 sticky top-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md z-10">
           <div className="flex items-center gap-2">
@@ -163,7 +222,9 @@ export const UtilityDashboardModal: React.FC<UtilityDashboardModalProps> = ({
               <h2 className="text-base font-extrabold text-slate-900 dark:text-slate-100">
                 Bảng Điều Khiển Cá Nhân Hóa Tiện Ích
               </h2>
-              <p className="text-[11px] text-slate-400">Trợ lý công cụ thực chiến trong chuyến đi</p>
+              <p className="text-[11px] text-slate-400">
+                Đồng bộ tự động theo điểm đến chuyến đi của bạn
+              </p>
             </div>
           </div>
           <button
@@ -174,28 +235,190 @@ export const UtilityDashboardModal: React.FC<UtilityDashboardModalProps> = ({
           </button>
         </div>
 
-        {/* Dark mode banner switch */}
-        <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2.5">
-            {darkMode ? <Moon className="w-5 h-5 text-amber-400" /> : <Sun className="w-5 h-5 text-amber-500" />}
-            <div>
-              <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                Chế độ Dark Mode hiện tại
-              </p>
-              <span className="text-[11px] text-slate-400">
-                {darkMode ? 'Giao diện Đêm êm dịu' : 'Giao diện Ngày sáng rõ'}
+        {/* Location sync indicator & switcher */}
+        <div className="p-3 rounded-2xl bg-sky-50/80 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-900/50 mb-4">
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <MapPin className="w-4 h-4 text-sky-600 flex-shrink-0" />
+              <div className="min-w-0">
+                <span className="text-[10px] text-slate-400 block leading-tight">Điểm đến đang áp dụng</span>
+                <span className="text-xs font-black text-sky-900 dark:text-sky-200 truncate block">
+                  {locationData.name}
+                </span>
+              </div>
+            </div>
+
+            {currentDestination && (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 flex items-center gap-1 flex-shrink-0">
+                <Check className="w-3 h-3" /> Từ lịch trình
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+            <span className="text-[10px] text-slate-500 font-semibold flex-shrink-0">Xem nhanh:</span>
+            {popularPreviewLocations.map((loc) => (
+              <button
+                key={loc}
+                type="button"
+                onClick={() => setActiveLocation(loc)}
+                className={`px-2.5 py-1 rounded-lg text-[10px] font-bold whitespace-nowrap transition-all ${
+                  activeLocation.toLowerCase().includes(loc.toLowerCase().split(' ')[0])
+                    ? 'bg-sky-600 text-white shadow-sm'
+                    : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-sky-400'
+                }`}
+              >
+                {loc.split(' — ')[0]}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* 1. Weather & UV Radar (Customized by Location) */}
+        <div className="bg-slate-50 dark:bg-slate-800/60 rounded-2xl p-4 border border-slate-200 dark:border-slate-700 mb-4">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+              <CloudSun className="w-4 h-4 text-sky-500" />
+              Radar Thời Tiết & Chỉ Số UV: {locationData.weather.destinationName}
+            </h3>
+            <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full">
+              {locationData.weather.badge}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2 text-center mb-2.5">
+            <div className="bg-white dark:bg-slate-900 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700">
+              <span className="text-[10px] text-slate-400 block">Nhiệt độ</span>
+              <span className="text-sm font-black text-slate-800 dark:text-slate-100">
+                {locationData.weather.temperature}
+              </span>
+              <span className="text-[9px] text-slate-400 block truncate">
+                {locationData.weather.tempSubtext}
+              </span>
+            </div>
+
+            <div className="bg-white dark:bg-slate-900 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700">
+              <span className="text-[10px] text-slate-400 block">Chỉ số UV</span>
+              <span className="text-sm font-black text-orange-500">
+                {locationData.weather.uvIndex}
+              </span>
+              <span className="text-[9px] text-slate-400 block truncate">
+                {locationData.weather.uvAction}
+              </span>
+            </div>
+
+            <div className="bg-white dark:bg-slate-900 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700">
+              <span className="text-[10px] text-slate-400 block">Hoàng hôn</span>
+              <span className="text-sm font-black text-sky-600">
+                {locationData.weather.sunsetTime}
+              </span>
+              <span className="text-[9px] text-slate-400 block truncate">
+                Đẹp nhất ngày
               </span>
             </div>
           </div>
-          <button
-            onClick={onToggleDarkMode}
-            className="px-3 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs shadow-sm transition-all"
-          >
-            {darkMode ? 'Bật giao diện Sáng' : 'Bật giao diện Tối'}
-          </button>
+
+          <div className="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center justify-between text-[11px] text-slate-600 dark:text-slate-300">
+            <span className="flex items-center gap-1 text-slate-500">
+              <Compass className="w-3.5 h-3.5 text-amber-500" />
+              Điểm ngắm hoàng hôn:
+            </span>
+            <span className="font-bold text-slate-800 dark:text-slate-100 truncate ml-2">
+              {locationData.weather.sunsetSpot}
+            </span>
+          </div>
         </div>
 
-        {/* 1. Currency Converter */}
+        {/* 2. Ambient Travel Sounds (Customized by Location) */}
+        <div className="bg-slate-50 dark:bg-slate-800/60 rounded-2xl p-4 border border-slate-200 dark:border-slate-700 mb-4">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+              <Volume2 className="w-4 h-4 text-cyan-600" />
+              Âm Thanh Thư Giãn Bản Địa ({locationData.name})
+            </h3>
+            {playingTrackId && (
+              <span className="text-[10px] text-cyan-600 font-bold animate-pulse">
+                Đang phát âm thanh...
+              </span>
+            )}
+          </div>
+
+          <div className="grid grid-cols-3 gap-2">
+            {locationData.ambientSounds.map((track) => {
+              const isPlaying = playingTrackId === track.id;
+              return (
+                <button
+                  key={track.id}
+                  onClick={() => playSoundTrack(track)}
+                  className={`p-2.5 rounded-xl border text-left text-xs transition-all flex flex-col justify-between ${
+                    isPlaying
+                      ? 'bg-cyan-600 text-white border-cyan-600 shadow-md'
+                      : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 hover:border-cyan-400'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[16px]">{track.emoji}</span>
+                    {isPlaying ? (
+                      <Pause className="w-3.5 h-3.5" />
+                    ) : (
+                      <Play className="w-3.5 h-3.5 text-slate-400" />
+                    )}
+                  </div>
+                  <div>
+                    <p className="font-bold text-[11px] truncate">{track.title}</p>
+                    <p
+                      className={`text-[9px] line-clamp-1 ${
+                        isPlaying ? 'text-cyan-100' : 'text-slate-400'
+                      }`}
+                    >
+                      {track.description}
+                    </p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 3. Emergency SOS & Rescue Hotlines (Customized by Location) */}
+        <div className="bg-rose-50 dark:bg-rose-950/30 rounded-2xl p-4 border border-rose-200 dark:border-rose-900/50 mb-4">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-xs font-bold text-rose-800 dark:text-rose-300 flex items-center gap-1.5">
+              <AlertTriangle className="w-4 h-4 text-rose-600" />
+              Đường Dây Nóng Khẩn Cấp & SOS ({locationData.name})
+            </h3>
+            <span className="text-[9px] font-bold text-rose-600 bg-rose-100 dark:bg-rose-900/40 px-2 py-0.5 rounded-full">
+              Chạm để gọi ngay
+            </span>
+          </div>
+
+          <div className="space-y-1.5 text-xs">
+            {locationData.hotlines.map((contact, idx) => (
+              <div
+                key={idx}
+                className="flex items-center justify-between bg-white dark:bg-slate-900 p-2.5 rounded-xl border border-rose-100 dark:border-rose-900/30 gap-2"
+              >
+                <div className="min-w-0">
+                  <span className="text-slate-800 dark:text-slate-200 font-bold block truncate text-[11px]">
+                    {contact.title}
+                  </span>
+                  {contact.note && (
+                    <span className="text-[10px] text-slate-400 block truncate">{contact.note}</span>
+                  )}
+                </div>
+                <a
+                  href={`tel:${contact.phone}`}
+                  className="px-2.5 py-1 rounded-lg bg-rose-500 hover:bg-rose-600 text-white font-black text-xs flex items-center gap-1 flex-shrink-0 shadow-sm"
+                >
+                  <PhoneCall className="w-3 h-3" />
+                  {contact.displayPhone.split(' / ')[0]}
+                </a>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* 4. Currency Converter */}
         <div className="bg-slate-50 dark:bg-slate-800/60 rounded-2xl p-4 border border-slate-200 dark:border-slate-700 mb-4">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
@@ -239,38 +462,7 @@ export const UtilityDashboardModal: React.FC<UtilityDashboardModalProps> = ({
           </div>
         </div>
 
-        {/* 2. Weather & UV Radar */}
-        <div className="bg-slate-50 dark:bg-slate-800/60 rounded-2xl p-4 border border-slate-200 dark:border-slate-700 mb-4">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-              <CloudSun className="w-4 h-4 text-sky-500" />
-              Radar Thời Tiết & Chỉ Số UV Đà Nẵng
-            </h3>
-            <span className="text-[10px] text-emerald-600 font-bold bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full">
-              Lý tưởng du lịch
-            </span>
-          </div>
-
-          <div className="grid grid-cols-3 gap-2 text-center">
-            <div className="bg-white dark:bg-slate-900 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700">
-              <span className="text-[10px] text-slate-400 block">Nhiệt độ</span>
-              <span className="text-sm font-black text-slate-800 dark:text-slate-100">29°C</span>
-              <span className="text-[9px] text-slate-400 block">Biển mát</span>
-            </div>
-            <div className="bg-white dark:bg-slate-900 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700">
-              <span className="text-[10px] text-slate-400 block">Chỉ số UV</span>
-              <span className="text-sm font-black text-orange-500">6.2 (Vừa)</span>
-              <span className="text-[9px] text-slate-400 block">Thoa kem</span>
-            </div>
-            <div className="bg-white dark:bg-slate-900 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700">
-              <span className="text-[10px] text-slate-400 block">Hoàng hôn</span>
-              <span className="text-sm font-black text-sky-600">17:58</span>
-              <span className="text-[9px] text-slate-400 block">View Mỹ Khê</span>
-            </div>
-          </div>
-        </div>
-
-        {/* 3. Interactive Packing Checklist */}
+        {/* 5. Interactive Packing Checklist */}
         <div className="bg-slate-50 dark:bg-slate-800/60 rounded-2xl p-4 border border-slate-200 dark:border-slate-700 mb-4">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
@@ -331,91 +523,28 @@ export const UtilityDashboardModal: React.FC<UtilityDashboardModalProps> = ({
           </form>
         </div>
 
-        {/* 4. Ambient Travel Sounds (Audio Synthesizer) */}
-        <div className="bg-slate-50 dark:bg-slate-800/60 rounded-2xl p-4 border border-slate-200 dark:border-slate-700 mb-4">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-              <Volume2 className="w-4 h-4 text-cyan-600" />
-              Âm Thanh Thư Giãn Chuyến Đi
-            </h3>
-            {playingTrack && (
-              <span className="text-[10px] text-cyan-600 font-bold animate-pulse">
-                Đang phát âm thanh...
+        {/* Dark mode banner switch */}
+        <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2.5">
+            {darkMode ? <Moon className="w-5 h-5 text-amber-400" /> : <Sun className="w-5 h-5 text-amber-500" />}
+            <div>
+              <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                Giao diện hiển thị
+              </p>
+              <span className="text-[11px] text-slate-400">
+                {darkMode ? 'Giao diện Đêm êm dịu' : 'Giao diện Ngày sáng rõ'}
               </span>
-            )}
-          </div>
-
-          <div className="grid grid-cols-3 gap-2">
-            <button
-              onClick={() => playSoundTrack('waves')}
-              className={`p-2.5 rounded-xl border text-left text-xs transition-all ${
-                playingTrack === 'waves'
-                  ? 'bg-cyan-600 text-white border-cyan-600 shadow-md'
-                  : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200'
-              }`}
-            >
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-[16px]">🌊</span>
-                {playingTrack === 'waves' ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-              </div>
-              <p className="font-bold text-[11px] truncate">Sóng Mỹ Khê</p>
-            </button>
-
-            <button
-              onClick={() => playSoundTrack('rain')}
-              className={`p-2.5 rounded-xl border text-left text-xs transition-all ${
-                playingTrack === 'rain'
-                  ? 'bg-cyan-600 text-white border-cyan-600 shadow-md'
-                  : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200'
-              }`}
-            >
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-[16px]">🌧️</span>
-                {playingTrack === 'rain' ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-              </div>
-              <p className="font-bold text-[11px] truncate">Mưa Rừng Bà Nà</p>
-            </button>
-
-            <button
-              onClick={() => playSoundTrack('night')}
-              className={`p-2.5 rounded-xl border text-left text-xs transition-all ${
-                playingTrack === 'night'
-                  ? 'bg-cyan-600 text-white border-cyan-600 shadow-md'
-                  : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200'
-              }`}
-            >
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-[16px]">🏮</span>
-                {playingTrack === 'night' ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-              </div>
-              <p className="font-bold text-[11px] truncate">Đêm Phố Hội An</p>
-            </button>
-          </div>
-        </div>
-
-        {/* 5. Emergency SOS & Tourist Directory */}
-        <div className="bg-rose-50 dark:bg-rose-950/30 rounded-2xl p-4 border border-rose-200 dark:border-rose-900/50 mb-2">
-          <h3 className="text-xs font-bold text-rose-800 dark:text-rose-300 flex items-center gap-1.5 mb-2">
-            <AlertTriangle className="w-4 h-4 text-rose-600" />
-            Đường Dây Nóng Khẩn Cấp & SOS Du Lịch
-          </h3>
-
-          <div className="space-y-1.5 text-xs">
-            <div className="flex items-center justify-between bg-white dark:bg-slate-900 p-2 rounded-xl border border-rose-100 dark:border-rose-900/30">
-              <span className="text-slate-700 dark:text-slate-300 font-medium">Trung tâm Hỗ trợ Du khách Đà Nẵng</span>
-              <a href="tel:02363550111" className="font-black text-rose-600 flex items-center gap-1">
-                <PhoneCall className="w-3.5 h-3.5" /> 0236.3550.111
-              </a>
-            </div>
-            <div className="flex items-center justify-between bg-white dark:bg-slate-900 p-2 rounded-xl border border-rose-100 dark:border-rose-900/30">
-              <span className="text-slate-700 dark:text-slate-300 font-medium">Cứu hộ bãi biển & Cấp cứu</span>
-              <a href="tel:115" className="font-black text-rose-600 flex items-center gap-1">
-                <PhoneCall className="w-3.5 h-3.5" /> 115
-              </a>
             </div>
           </div>
+          <button
+            onClick={onToggleDarkMode}
+            className="px-3 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs shadow-sm transition-all"
+          >
+            {darkMode ? 'Bật giao diện Sáng' : 'Bật giao diện Tối'}
+          </button>
         </div>
       </div>
     </div>
   );
 };
+
