@@ -46,12 +46,8 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     <div className="flex flex-col w-full pb-24">
       {/* User Overview Card */}
       <div className="bg-white dark:bg-slate-800/90 rounded-3xl p-5 border border-slate-200/90 dark:border-slate-700 shadow-sm flex items-center gap-4 mb-5">
-        <div className="relative w-16 h-16 rounded-full overflow-hidden flex-shrink-0 ring-4 ring-sky-100 dark:ring-slate-700">
-          <img
-            src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80"
-            alt={userName}
-            className="w-full h-full object-cover"
-          />
+        <div className="relative w-16 h-16 rounded-full overflow-hidden flex-shrink-0 ring-4 ring-sky-100 dark:ring-slate-700 bg-gradient-to-tr from-sky-600 via-sky-500 to-cyan-500 text-white font-black text-xl flex items-center justify-center tracking-wider shadow-md">
+          VH
         </div>
 
         <div className="flex-1 min-w-0">

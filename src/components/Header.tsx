@@ -102,15 +102,11 @@ export const Header: React.FC<HeaderProps> = ({
           {/* User Profile / Auth Avatar */}
           <button
             onClick={onOpenProfileOrAuth}
-            title={isLoggedIn ? 'Hồ sơ người dùng' : 'Đăng nhập'}
-            className="ml-1 w-9 h-9 rounded-full bg-sky-600 dark:bg-sky-500 text-white flex items-center justify-center font-bold text-xs ring-2 ring-sky-200 dark:ring-sky-900 hover:opacity-90 transition-all overflow-hidden"
+            title={isLoggedIn ? 'Hồ sơ người dùng (Nguyễn Việt Hùng)' : 'Đăng nhập'}
+            className="ml-1 w-9 h-9 rounded-full bg-gradient-to-tr from-sky-600 via-sky-500 to-cyan-500 text-white flex items-center justify-center font-black text-xs tracking-wider ring-2 ring-sky-200 dark:ring-sky-900 hover:opacity-95 shadow-sm transition-all overflow-hidden"
           >
             {isLoggedIn ? (
-              <img
-                src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80"
-                alt="Nguyễn Việt Hùng"
-                className="w-full h-full object-cover"
-              />
+              <span>VH</span>
             ) : (
               <LogIn className="w-4 h-4" />
             )}

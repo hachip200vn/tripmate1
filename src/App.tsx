@@ -27,6 +27,11 @@ import {
   initialExpenses,
   exploreSpots,
 } from './data/tripData';
+import {
+  getDestinationPolls,
+  getDestinationExpenses,
+  calculateMemberBalances,
+} from './data/destinationPollsAndBudgetData';
 import { NavTab, TimelineActivity, TripDay, TripPlanData, VotePoll, ExpenseItem, NotificationItem } from './types';
 import { CheckCircle2 } from 'lucide-react';
 
@@ -48,8 +53,9 @@ export default function App() {
   const [activities, setActivities] = useState<TimelineActivity[]>([]);
   const [selectedDayNumber, setSelectedDayNumber] = useState<number>(1);
 
-  const [polls, setPolls] = useState<VotePoll[]>(initialPolls);
-  const [expenses, setExpenses] = useState<ExpenseItem[]>(initialExpenses);
+  // Polls & Expenses - initially empty when no trip plan is created
+  const [polls, setPolls] = useState<VotePoll[]>([]);
+  const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
   const [members, setMembers] = useState(initialMembers);
   const [notifications, setNotifications] = useState<NotificationItem[]>(initialNotifications);
 
@@ -75,6 +81,21 @@ export default function App() {
       setToastMessage(null);
     }, 3000);
   };
+
+  // Synchronize Polls and Budget when trip destination changes
+  useEffect(() => {
+    if (!tripPlan || !tripPlan.destination) {
+      setPolls([]);
+      setExpenses([]);
+      setMembers(initialMembers.map((m) => ({ ...m, paidAmount: 0, owesAmount: 0 })));
+    } else {
+      const destPolls = getDestinationPolls(tripPlan.destination);
+      const destExpenses = getDestinationExpenses(tripPlan.destination);
+      setPolls(destPolls);
+      setExpenses(destExpenses);
+      setMembers(calculateMemberBalances(destExpenses, initialMembers));
+    }
+  }, [tripPlan?.destination]);
 
   // Dark Mode effect
   useEffect(() => {
@@ -165,28 +186,29 @@ export default function App() {
 
   // Create Poll
   const handleCreatePoll = () => {
+    const dest = tripPlan?.destination || 'chuyến đi';
     const newPoll: VotePoll = {
       id: `poll-${Date.now()}`,
-      title: 'Chọn điểm ngắm pháo hoa Quốc tế DIFF tối nay',
+      title: `Chọn điểm tụ tập & thưởng thức ẩm thực tiếp theo tại ${dest}`,
       creator: 'Nguyễn Việt Hùng',
-      deadline: '19:00 hôm nay',
-      category: 'Sự kiện đặc biệt',
+      deadline: '20:00 tối nay',
+      category: 'Kế hoạch phát sinh',
       status: 'active',
       options: [
         {
           id: `opt-${Date.now()}-1`,
-          title: 'Khán đài bờ sông Hàn',
-          location: 'Đường Trần Hưng Đạo',
-          priceText: '300.000đ/vé',
+          title: `Nhà hàng & Quán đặc sản nổi bật trung tâm ${dest}`,
+          location: `Trung tâm ${dest}`,
+          priceText: '~120.000đ/người',
           votes: 1,
           votedByMe: true,
           voterAvatars: ['VH'],
         },
         {
           id: `opt-${Date.now()}-2`,
-          title: 'Rooftop Bar Novotel Danang',
-          location: '36 Bạch Đằng',
-          priceText: 'Đồ uống gọi món',
+          title: `Trải nghiệm dạo đêm & Cà phê ngắm phố ${dest}`,
+          location: `Khu phố trung tâm ${dest}`,
+          priceText: 'Tự túc',
           votes: 0,
           votedByMe: false,
           voterAvatars: [],
@@ -194,7 +216,7 @@ export default function App() {
       ],
     };
     setPolls((prev) => [newPoll, ...prev]);
-    showToast('Đã tạo cuộc bình chọn mới cho nhóm!');
+    showToast(`Đã tạo cuộc bình chọn mới cho ${dest}!`);
   };
 
   // Add Expense
@@ -215,16 +237,9 @@ export default function App() {
       splitWithCount: expense.splitWithCount,
       date: 'Hôm nay',
     };
-    setExpenses((prev) => [newExp, ...prev]);
-
-    // Update paid amount
-    setMembers((prev) =>
-      prev.map((m) =>
-        m.name === expense.paidByName
-          ? { ...m, paidAmount: m.paidAmount + expense.amount }
-          : m
-      )
-    );
+    const updatedExpenses = [newExp, ...expenses];
+    setExpenses(updatedExpenses);
+    setMembers(calculateMemberBalances(updatedExpenses, initialMembers));
 
     showToast(`Đã thêm khoản chi "${expense.title}"!`);
   };
@@ -343,8 +358,14 @@ export default function App() {
               >
                 <VotingView
                   polls={polls}
+                  currentDestination={tripPlan?.destination}
                   onVoteOption={handleVoteOption}
                   onCreatePoll={handleCreatePoll}
+                  onSwitchToItinerary={() => setCurrentTab('lich-trinh')}
+                  onOpenAiPlanner={() => {
+                    setCurrentTab('lich-trinh');
+                    setShowAiPlannerModal(true);
+                  }}
                 />
               </motion.div>
             )}
@@ -360,10 +381,16 @@ export default function App() {
                 <BudgetView
                   expenses={expenses}
                   members={members}
+                  currentDestination={tripPlan?.destination}
                   onAddExpense={() => setShowAddExpenseModal(true)}
                   onOpenSettleQr={(payer, amount) => {
                     setSettlePayer({ name: payer, amount });
                     setShowSettleQrModal(true);
+                  }}
+                  onSwitchToItinerary={() => setCurrentTab('lich-trinh')}
+                  onOpenAiPlanner={() => {
+                    setCurrentTab('lich-trinh');
+                    setShowAiPlannerModal(true);
                   }}
                 />
               </motion.div>
