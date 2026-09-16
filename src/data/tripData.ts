@@ -1,4 +1,4 @@
-import { TripDay, TimelineActivity, NotificationItem, VotePoll, ExpenseItem, Member } from '../types';
+import { TripDay, TimelineActivity, NotificationItem, VotePoll, ExpenseItem, Member, TripPlanData } from '../types';
 
 export const initialMembers: Member[] = [
   {
@@ -445,3 +445,529 @@ export const exploreSpots = [
     priceText: '~30.000đ - 150.000đ'
   }
 ];
+
+export interface GeneratePlanOptions {
+  destination?: string;
+  startDate?: string;
+  endDate?: string;
+  membersCount?: number;
+  budget?: string;
+  vibes?: string[];
+  pace?: string;
+  notes?: string;
+}
+
+export function generatePrototypeTripPlan(options: GeneratePlanOptions = {}): TripPlanData {
+  const dest = options.destination?.trim() || 'Đà Nẵng — Hội An';
+  const lower = dest.toLowerCase();
+  const members = options.membersCount || 5;
+
+  // PHÚ QUỐC
+  if (lower.includes('phú quốc') || lower.includes('phu quoc')) {
+    const days: TripDay[] = [
+      { dayNumber: 1, date: options.startDate || '2025-05-10', displayDate: '10/05', title: 'Hạ cánh Đảo Ngọc & Sunset Sanato', activitiesCount: 4 },
+      { dayNumber: 2, date: '2025-05-11', displayDate: '11/05', title: 'Tour 4 Đảo Cano & Cáp treo Hòn Thơm', activitiesCount: 4 },
+      { dayNumber: 3, date: '2025-05-12', displayDate: '12/05', title: 'Grand World & Chợ đêm Phú Quốc', activitiesCount: 3 },
+      { dayNumber: 4, date: options.endDate || '2025-05-13', displayDate: '13/05', title: 'Mua sắm ngọc trai & Tạm biệt đảo', activitiesCount: 2 }
+    ];
+    const activities: TimelineActivity[] = [
+      {
+        id: 'pq-101',
+        dayNumber: 1,
+        time: '10:00',
+        category: 'Di chuyển & Đến nơi',
+        title: 'Hạ cánh sân bay Quốc tế Phú Quốc (PQC)',
+        location: 'Dương Tơ, Phú Quốc',
+        costText: 'Đã gồm vé máy bay',
+        statusText: 'Đúng giờ',
+        statusType: 'transport',
+        iconType: 'transport',
+        details: 'Xe limousine 9 chỗ đón nhóm về thị trấn Dương Đông'
+      },
+      {
+        id: 'pq-102',
+        dayNumber: 1,
+        time: '12:00',
+        category: 'Ẩm thực trưa',
+        title: 'Bún quậy Kiến Xây trứ danh',
+        location: '28 Bạch Đằng, Dương Đông',
+        costText: '~65.000đ/tô',
+        statusText: 'Đã duyệt',
+        statusType: 'approved',
+        iconType: 'food',
+        details: 'Tự tay pha nước chấm tắc ớt muối tiêu đặc trưng của quán'
+      },
+      {
+        id: 'pq-103',
+        dayNumber: 1,
+        time: '14:30',
+        category: 'Lưu trú',
+        title: 'Check-in Sunset Town Resort & Spa',
+        location: 'Thị trấn Hoàng Hôn, An Thới',
+        costText: 'Đã đặt phòng',
+        statusText: 'Đã đặt',
+        statusType: 'booked',
+        iconType: 'landmark',
+        details: 'Phòng ban công nhìn thẳng ra Cầu Hôn (Kiss Bridge)'
+      },
+      {
+        id: 'pq-104',
+        dayNumber: 1,
+        time: '17:00',
+        category: 'Sống ảo & Biển',
+        title: 'Check-in hoàng hôn Sunset Sanato Beach Club',
+        location: 'Bãi Trường, Dương Tơ',
+        costText: '100.000đ vé vào cổng',
+        statusText: 'Đã duyệt',
+        statusType: 'approved',
+        iconType: 'beach',
+        details: 'Chụp ảnh với đàn voi chân dài và tượng đầu người khổng lồ chia đôi'
+      },
+      {
+        id: 'pq-201',
+        dayNumber: 2,
+        time: '08:00',
+        category: 'Tour đảo & Trải nghiệm',
+        title: 'Cano cao tốc khám phá Hòn Mây Rút & Gầm Ghì',
+        location: 'Cảng An Thới',
+        costText: 'Combo 650.000đ/người',
+        statusText: 'Xe đón',
+        statusType: 'transport',
+        iconType: 'landmark',
+        details: 'Lặn ngắm san hô tự nhiên, chụp ảnh flycam ván SUP miễn phí'
+      },
+      {
+        id: 'pq-202',
+        dayNumber: 2,
+        time: '12:30',
+        category: 'Ẩm thực hải sản',
+        title: 'Ăn trưa hải sản trên bè Hòn Móng Tay',
+        location: 'Hòn Móng Tay',
+        costText: 'Bao gồm trong tour',
+        statusText: 'Đã duyệt',
+        statusType: 'approved',
+        iconType: 'dining',
+        details: 'Cá mú nướng than, nhum nướng mỡ hành, ghẹ hấp sả'
+      },
+      {
+        id: 'pq-203',
+        dayNumber: 2,
+        time: '15:30',
+        category: 'Điểm nhấn cáp treo',
+        title: 'Cáp treo Hòn Thơm vượt biển dài nhất thế giới',
+        location: 'Ga Ánh Dương, Sun World Hòn Thơm',
+        costText: 'Bao gồm combo',
+        statusText: 'Đã đặt',
+        statusType: 'booked',
+        iconType: 'landmark',
+        details: 'Toàn cảnh vịnh biển An Thới ngút ngàn từ độ cao 160m'
+      },
+      {
+        id: 'pq-204',
+        dayNumber: 2,
+        time: '19:30',
+        category: 'Đêm & Ẩm thực',
+        title: 'Chợ đêm Vui Phết (VUI-Fest Bazaar)',
+        location: 'Bờ biển Sunset Town',
+        costText: '~150.000đ/người',
+        statusText: 'Đang bình chọn',
+        statusType: 'voted',
+        iconType: 'night',
+        details: 'Thưởng thức ẩm thực đường phố và ngắm pháo hoa lúc 21:30'
+      }
+    ];
+
+    return {
+      tripTitle: 'Kỳ nghỉ Phú Quốc — Đảo Ngọc Thiên Đường 🏝️',
+      destination: 'Phú Quốc, Kiên Giang',
+      datesSummary: options.startDate && options.endDate ? `${options.startDate} – ${options.endDate} (4 ngày 3 đêm)` : '10/05 – 13/05/2025 (4 ngày 3 đêm)',
+      totalDays: 4,
+      coverImage: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=1200&auto=format&fit=crop&q=80',
+      days,
+      activities,
+      aiSummary: 'Kế hoạch đã tối ưu hướng di chuyển từ Nam Đảo lên Bắc Đảo. Tránh các khung giờ nắng gắt và kết hợp lặn san hô cùng hoàng hôn đẹp nhất Việt Nam!'
+    };
+  }
+
+  // ĐÀ LẠT
+  if (lower.includes('đà lạt') || lower.includes('da lat')) {
+    const days: TripDay[] = [
+      { dayNumber: 1, date: options.startDate || '2025-06-01', displayDate: '01/06', title: 'Lên đỉnh sương mù & Dạo Hồ Xuân Hương', activitiesCount: 4 },
+      { dayNumber: 2, date: '2025-06-02', displayDate: '02/06', title: 'Săn mây Cầu Đất & Vườn hoa cẩm tú cầu', activitiesCount: 3 },
+      { dayNumber: 3, date: '2025-06-03', displayDate: '03/06', title: 'Thác Datanla mạo hiểm & Cafe Túi Mơ To', activitiesCount: 3 },
+      { dayNumber: 4, date: options.endDate || '2025-06-04', displayDate: '04/06', title: 'Chợ Đà Lạt & Tạm biệt phố núi', activitiesCount: 2 }
+    ];
+    const activities: TimelineActivity[] = [
+      {
+        id: 'dl-101',
+        dayNumber: 1,
+        time: '11:00',
+        category: 'Đến nơi & Nhận phòng',
+        title: 'Check-in Homestay Nhà Bên Rừng Thông',
+        location: 'Đường Hùng Vương, Phường 11, Đà Lạt',
+        costText: 'Đã cọc 50%',
+        statusText: 'Đã đặt phòng',
+        statusType: 'booked',
+        iconType: 'landmark',
+        details: 'Không gian yên bình giữa đồi thông, có sân nướng BBQ cho nhóm'
+      },
+      {
+        id: 'dl-102',
+        dayNumber: 1,
+        time: '12:30',
+        category: 'Ẩm thực trưa',
+        title: 'Lẩu gà lá é Tao Ngộ',
+        location: 'Số 5 đường 3/4, Phường 3',
+        costText: '~80.000đ/người',
+        statusText: 'Đã duyệt',
+        statusType: 'approved',
+        iconType: 'food',
+        details: 'Lẩu gà nóng hổi, thịt gà đồi săn chắc và vị the the của lá é'
+      },
+      {
+        id: 'dl-103',
+        dayNumber: 1,
+        time: '16:00',
+        category: 'Check-in & Dạo mát',
+        title: 'Quảng trường Lâm Viên & Đạp vịt Hồ Xuân Hương',
+        location: 'Đường Trần Quốc Toản, Phường 1',
+        costText: 'Miễn phí',
+        statusText: 'Đã duyệt',
+        statusType: 'approved',
+        iconType: 'landmark',
+        details: 'Chụp hình nụ hoa Atiso khổng lồ và ngắm hoàng hôn mặt hồ phẳng lặng'
+      },
+      {
+        id: 'dl-104',
+        dayNumber: 1,
+        time: '19:30',
+        category: 'Đêm phố núi',
+        title: 'Chợ đêm Đà Lạt & Sữa đậu nành nóng',
+        location: 'Khu Hoà Bình, Phường 1',
+        costText: '~50.000đ/người',
+        statusText: '5/5 đồng ý',
+        statusType: 'voted',
+        iconType: 'night',
+        details: 'Bánh tráng nướng trứng lòng đào, dâu tây lắc và sữa đậu nành kem trứng'
+      },
+      {
+        id: 'dl-201',
+        dayNumber: 2,
+        time: '05:00',
+        category: 'Săn mây cực phẩm',
+        title: 'Đón bình minh thảm gỗ săn mây Cầu Đất',
+        location: 'Đồi chè Cầu Đất, Trạm Hành',
+        costText: '120.000đ vé vào cổng + cafe',
+        statusText: 'Xe đón',
+        statusType: 'transport',
+        iconType: 'landmark',
+        details: 'Khoảnh khắc biển mây cuồn cuộn dưới ánh nắng vàng ươm lúc 5:45 - 6:30'
+      }
+    ];
+
+    return {
+      tripTitle: 'Hành Trình Săn Mây & Chill Phố Núi Đà Lạt 🌲☕',
+      destination: 'Đà Lạt, Lâm Đồng',
+      datesSummary: options.startDate && options.endDate ? `${options.startDate} – ${options.endDate} (4 ngày 3 đêm)` : '01/06 – 04/06/2025 (4 ngày 3 đêm)',
+      totalDays: 4,
+      coverImage: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=1200&auto=format&fit=crop&q=80',
+      days,
+      activities,
+      aiSummary: 'Thời tiết Đà Lạt se lạnh vào sáng sớm và tối, nên chuẩn bị áo khoác mỏng. Đã bố trí xen kẽ giữa các quán cafe view thung lũng và điểm tham quan thiên nhiên.'
+    };
+  }
+
+  // HÀ GIANG
+  if (lower.includes('hà giang') || lower.includes('ha giang')) {
+    const days: TripDay[] = [
+      { dayNumber: 1, date: options.startDate || '2025-10-15', displayDate: '15/10', title: 'Cột Mốc Số 0 & Cổng Trời Quản Bạ', activitiesCount: 3 },
+      { dayNumber: 2, date: '2025-10-16', displayDate: '16/10', title: 'Dốc Thẩm Mã & Dinh Thự Họ Vương', activitiesCount: 3 },
+      { dayNumber: 3, date: '2025-10-17', displayDate: '17/10', title: 'Đèo Mã Pí Lèng & Thuyền Sông Nho Quế', activitiesCount: 4 },
+      { dayNumber: 4, date: options.endDate || '2025-10-18', displayDate: '18/10', title: 'Phố cổ Đồng Văn & Hành trình trở về', activitiesCount: 2 }
+    ];
+    const activities: TimelineActivity[] = [
+      {
+        id: 'hg-101',
+        dayNumber: 1,
+        time: '08:00',
+        category: 'Check-in khởi hành',
+        title: 'Check-in Cột Mốc Km0 Hà Giang',
+        location: 'Quảng trường 26/3, TP. Hà Giang',
+        costText: 'Miễn phí',
+        statusText: 'Đã duyệt',
+        statusType: 'approved',
+        iconType: 'landmark',
+        details: 'Điểm khởi đầu thiêng liêng của cung đường đèo hùng vĩ nhất miền Bắc'
+      },
+      {
+        id: 'hg-102',
+        dayNumber: 1,
+        time: '11:30',
+        category: 'Danh thắng',
+        title: 'Cổng Trời Quản Bạ & Núi Đôi Cô Tiên',
+        location: 'Thị trấn Tam Sơn, Quản Bạ',
+        costText: 'Miễn phí',
+        statusText: 'Đã duyệt',
+        statusType: 'approved',
+        iconType: 'landmark',
+        details: 'Ngắm trọn thung lũng Tam Sơn bồng bềnh mây trắng'
+      },
+      {
+        id: 'hg-301',
+        dayNumber: 3,
+        time: '08:30',
+        category: 'Tuyệt tác thiên nhiên',
+        title: 'Chinh phục Đèo Mã Pí Lèng huyền thoại',
+        location: 'Pải Lủng, Mèo Vạc',
+        costText: 'Tự do trải nghiệm',
+        statusText: 'Đã duyệt',
+        statusType: 'approved',
+        iconType: 'landmark',
+        details: 'Một trong tứ đại đỉnh đèo hiểm trở và ngoạn mục nhất Việt Nam'
+      },
+      {
+        id: 'hg-302',
+        dayNumber: 3,
+        time: '10:30',
+        category: 'Trải nghiệm đỉnh cao',
+        title: 'Đi thuyền hẻm vực Tu Sản & Sông Nho Quế',
+        location: 'Bến thuyền Tà Làng, Pải Lủng',
+        costText: '120.000đ/vé',
+        statusText: 'Đã đặt',
+        statusType: 'booked',
+        iconType: 'beach',
+        details: 'Dòng sông xanh ngọc bích len lỏi qua vách đá dựng đứng cao ngút trời'
+      }
+    ];
+
+    return {
+      tripTitle: 'Chinh Phục Đèo Hùng Vĩ & Sông Nho Quế Hà Giang 🏔️🏍️',
+      destination: 'Hà Giang',
+      datesSummary: options.startDate && options.endDate ? `${options.startDate} – ${options.endDate} (4 ngày 3 đêm)` : '15/10 – 18/10/2025 (4 ngày 3 đêm)',
+      totalDays: 4,
+      coverImage: 'https://images.unsplash.com/photo-1528127269322-539801943592?w=1200&auto=format&fit=crop&q=80',
+      days,
+      activities,
+      aiSummary: 'Cung đường có độ dốc cao và nhiều cua tay áo, khuyến nghị tài xế vững tay lái hoặc thuê tour xe máy người bản địa dẫn đường!'
+    };
+  }
+
+  // DEFAULT / ĐÀ NẴNG — HỘI AN (Exact screen match with Day 2 details!)
+  const days: TripDay[] = [
+    { dayNumber: 1, date: options.startDate || '2025-04-15', displayDate: '15/04', title: 'Đến nơi & Nhận phòng', activitiesCount: 3 },
+    { dayNumber: 2, date: '2025-04-16', displayDate: '16/04', title: 'Bà Nà & Biển Mỹ Khê', activitiesCount: 5 },
+    { dayNumber: 3, date: '2025-04-17', displayDate: '17/04', title: 'Phố cổ Hội An', activitiesCount: 4 },
+    { dayNumber: 4, date: options.endDate || '2025-04-18', displayDate: '18/04', title: 'Mua sắm & Về lại', activitiesCount: 2 }
+  ];
+
+  const activities: TimelineActivity[] = [
+    // Day 1
+    {
+      id: 'act-101',
+      dayNumber: 1,
+      time: '09:30',
+      category: 'Chuyến bay & Di chuyển',
+      title: 'Hạ cánh sân bay Quốc tế Đà Nẵng (DAD)',
+      location: 'Cổng đến T1, Sân bay Đà Nẵng',
+      costText: 'Đã thanh toán vé',
+      statusText: 'Đúng giờ',
+      statusType: 'transport',
+      iconType: 'transport',
+      details: 'Xe đón hợp đồng 7 chỗ đã chờ ở bãi xe B1',
+      note: 'VJ-628 cất cánh từ SGN'
+    },
+    {
+      id: 'act-102',
+      dayNumber: 1,
+      time: '11:30',
+      category: 'Ẩm thực trưa',
+      title: 'Bánh tráng cuốn thịt heo Đại Lộc',
+      location: '97 Trưng Nữ Vương, Hải Châu',
+      costText: '~75.000đ/phần',
+      statusText: 'Đã duyệt',
+      statusType: 'approved',
+      iconType: 'food',
+      details: 'Đặc sản thịt heo hai đầu da chấm mắm nêm đậm đà'
+    },
+    {
+      id: 'act-103',
+      dayNumber: 1,
+      time: '14:00',
+      category: 'Lưu trú',
+      title: 'Check-in Sala Danang Beach Hotel',
+      location: '36 Lâm Hoành, Phước Mỹ, Sơn Trà',
+      costText: '2 phòng Ocean View',
+      statusText: 'Đã đặt phòng',
+      statusType: 'booked',
+      iconType: 'landmark',
+      details: 'Cách bãi biển Mỹ Khê 120m, có hồ bơi vô cực tầng 25'
+    },
+    // Day 2 (Exact match to Image 1)
+    {
+      id: 'act-201',
+      dayNumber: 2,
+      time: '08:30',
+      category: 'Ẩm thực sáng',
+      title: 'Ăn sáng Mì Quảng Bà Mua',
+      location: '19 Trần Bình Trọng, Hải Châu',
+      costText: '~55.000đ/tô',
+      pricePerPerson: 55000,
+      statusText: 'Đã duyệt',
+      statusType: 'approved',
+      iconType: 'food',
+      details: 'Thực đơn: Mì Quảng ếch, tôm thịt, gà ta thả vườn',
+      note: `${members} người ăn`
+    },
+    {
+      id: 'act-202',
+      dayNumber: 2,
+      time: '10:00',
+      category: 'Điểm nhấn chính',
+      title: 'Check-in Cầu Vàng & Bà Nà Hills',
+      location: 'Tuyến cáp treo Thác Tóc Tiên',
+      costText: '900.000đ',
+      pricePerPerson: 900000,
+      statusText: 'Xe đón',
+      statusType: 'transport',
+      iconType: 'landmark',
+      imageUrl: 'https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?w=300&auto=format&fit=crop&q=80',
+      details: 'Vé cáp treo khứ hồi: 900.000đ',
+      driverInfo: 'Tài xế Hùng (0912.xxx.888) đón tại sảnh khách sạn lúc 09:15'
+    },
+    {
+      id: 'act-203',
+      dayNumber: 2,
+      time: '13:00',
+      category: 'Ăn trưa',
+      title: 'Ăn trưa Buffet Bốn Mùa',
+      location: 'Tầng 2 Quả Cầu Bà Nà (Bàn 14)',
+      costText: 'Bao gồm trong combo',
+      statusText: 'Đã đặt bàn',
+      statusType: 'booked',
+      iconType: 'dining',
+      details: 'Bao gồm trong combo vé',
+      note: 'Kèm trái cây tráng miệng'
+    },
+    {
+      id: 'act-204',
+      dayNumber: 2,
+      time: '16:30',
+      category: 'Giải trí ngoài trời',
+      title: 'Tắm biển Mỹ Khê & lướt ván',
+      location: 'Bãi tắm số 2, Đà Nẵng',
+      costText: 'Thuê ván ~150.000đ/giờ',
+      pricePerPerson: 150000,
+      statusText: '5/5 đồng ý',
+      statusType: 'voted',
+      iconType: 'beach',
+      details: 'Thuê ván lướt sóng SUP & ngắm hoàng hôn rực rỡ trên bãi biển Mỹ Khê',
+      note: 'Hoàng hôn đẹp'
+    },
+    {
+      id: 'act-205',
+      dayNumber: 2,
+      time: '19:30',
+      category: 'Đêm Hội An',
+      title: 'Dạo phố cổ Hội An & Thả hoa đăng',
+      location: 'Bờ sông Hoài, phố Bạch Đằng',
+      costText: 'Thuyền + hoa: 100.000đ',
+      pricePerPerson: 100000,
+      statusText: 'Chờ chốt giờ',
+      statusType: 'pending',
+      iconType: 'night',
+      details: 'Ngắm lồng đèn rực rỡ, thưởng thức chè mè đen và đi thuyền thả đèn hoa đăng',
+      voteStats: 'Bình chọn lại'
+    },
+    // Day 3
+    {
+      id: 'act-301',
+      dayNumber: 3,
+      time: '08:00',
+      category: 'Cà phê & Điểm tâm',
+      title: 'Cà phê Faifo Hội An & Bánh mì Phượng',
+      location: '130 Trần Phú, Minh An, Hội An',
+      costText: '~60.000đ/người',
+      statusText: 'Đã duyệt',
+      statusType: 'approved',
+      iconType: 'food',
+      details: 'Góc sân thượng ngắm trọn vẹn mái ngói rêu phong phố cổ Hội An'
+    },
+    {
+      id: 'act-302',
+      dayNumber: 3,
+      time: '10:00',
+      category: 'Trải nghiệm văn hóa',
+      title: 'Rừng dừa Bảy Mẫu & Thuyền thúng',
+      location: 'Cẩm Thanh, Hội An',
+      costText: '150.000đ/người',
+      statusText: 'Đã đặt cọc',
+      statusType: 'booked',
+      iconType: 'landmark',
+      details: 'Múa thúng xoay vòng vui nhộn, câu cua đá cùng ngư dân địa phương'
+    },
+    {
+      id: 'act-303',
+      dayNumber: 3,
+      time: '13:00',
+      category: 'Ẩm thực trưa',
+      title: 'Cơm gà Bà Buội Hội An',
+      location: '22 Phan Chu Trinh, Minh An',
+      costText: '~65.000đ/dĩa',
+      statusText: 'Đã duyệt',
+      statusType: 'approved',
+      iconType: 'food',
+      details: 'Thịt gà xé trộn hành tây cay nồng, cơm vàng óng nấu từ nước luộc gà'
+    },
+    {
+      id: 'act-304',
+      dayNumber: 3,
+      time: '18:30',
+      category: 'Show biểu diễn',
+      title: 'Show Ký Ức Hội An (Hoi An Memories)',
+      location: 'Công viên Ấn tượng Hội An',
+      costText: '600.000đ vé Eco',
+      statusText: 'Đã đặt vé',
+      statusType: 'booked',
+      iconType: 'night',
+      details: 'Đại cảnh sân khấu ngoài trời với hơn 500 diễn viên tái hiện 400 năm lịch sử'
+    },
+    // Day 4
+    {
+      id: 'act-401',
+      dayNumber: 4,
+      time: '08:30',
+      category: 'Tham quan & Tâm linh',
+      title: 'Bán đảo Sơn Trà & Chùa Linh Ứng',
+      location: 'Hoàng Sa, Thọ Quang, Sơn Trà',
+      costText: 'Miễn phí',
+      statusText: 'Đã duyệt',
+      statusType: 'approved',
+      iconType: 'landmark',
+      details: 'Tượng Phật Bà Quán Thế Âm cao 67m hướng mắt ra biển đông bình yên'
+    },
+    {
+      id: 'act-402',
+      dayNumber: 4,
+      time: '11:00',
+      category: 'Mua sắm đặc sản',
+      title: 'Chợ Hàn mua quà & Tré Bà Đệ',
+      location: '119 Trần Phú, Hải Châu',
+      costText: 'Tự do mua sắm',
+      statusText: 'Đã duyệt',
+      statusType: 'approved',
+      iconType: 'landmark',
+      details: 'Chả bò Đà Nẵng, mực rim me, bánh khô mè cẩm lệ làm quà người thân'
+    }
+  ];
+
+  return {
+    tripTitle: `Chuyến đi ${dest} rực rỡ 🌊🏮`,
+    destination: dest,
+    datesSummary: options.startDate && options.endDate ? `${options.startDate} – ${options.endDate} (4 ngày 3 đêm)` : '15/04 – 18/04/2025 (4 ngày 3 đêm)',
+    totalDays: 4,
+    coverImage: 'https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?w=1200&auto=format&fit=crop&q=80',
+    days,
+    activities,
+    aiSummary: 'Lịch trình được AI tối ưu hóa tuyến đường di chuyển hợp lý, xen kẽ giữa trải nghiệm biển Mỹ Khê, danh thắng Bà Nà Hills và vẻ đẹp cổ kính lung linh đèn hoa đăng phố cổ Hội An!'
+  };
+}

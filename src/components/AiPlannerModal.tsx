@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   X,
   Sparkles,
@@ -17,6 +17,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { TripPlanData } from '../types';
+import { generatePrototypeTripPlan } from '../data/tripData';
 
 interface AiPlannerModalProps {
   isOpen: boolean;
@@ -47,6 +48,20 @@ export const AiPlannerModal: React.FC<AiPlannerModalProps> = ({
   const [generationStep, setGenerationStep] = useState('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [chimePlaying, setChimePlaying] = useState(false);
+  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  useEffect(() => {
+    return () => {
+      timersRef.current.forEach(clearTimeout);
+    };
+  }, []);
+
+  const handleClose = () => {
+    timersRef.current.forEach(clearTimeout);
+    setIsGenerating(false);
+    setGenerationStep('');
+    onClose();
+  };
 
   const destinationChips = ['Đà Nẵng — Hội An', 'Phú Quốc', 'Đà Lạt', 'Hà Giang'];
 
@@ -98,31 +113,36 @@ export const AiPlannerModal: React.FC<AiPlannerModalProps> = ({
     }
   };
 
-  const handleGenerate = async () => {
+  const handleGenerate = () => {
     setIsGenerating(true);
     setErrorMsg(null);
-    setGenerationStep('Đang kết nối Gemini AI từ backend...');
+    setGenerationStep('Đang kích hoạt TripMate AI Core Engine...');
 
-    const stepTimer = setInterval(() => {
-      setGenerationStep((prev) => {
-        if (prev.includes('kết nối')) return 'Đang phân tích điểm đến & tối ưu hóa tuyến đường...';
-        if (prev.includes('phân tích')) return 'Đang lên chi tiết mốc giờ, ẩm thực & chi phí nhóm...';
-        return 'Đang hoàn tất lịch trình thông minh...';
-      });
-    }, 1800);
+    timersRef.current.forEach(clearTimeout);
+    timersRef.current = [];
 
-    try {
-      const budgetLabel =
-        budgetTier === 'budget'
-          ? 'Tiết kiệm (~2-3tr/người)'
-          : budgetTier === 'standard'
-          ? 'Tiêu chuẩn (~4-5tr/người)'
-          : 'Sang chảnh (>8tr/người)';
+    const t1 = setTimeout(() => {
+      setGenerationStep(`Đang phân tích điểm đến ${destination || 'du lịch'} & tối ưu cung đường...`);
+    }, 850);
 
-      const res = await fetch('/api/ai/plan-itinerary', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+    const t2 = setTimeout(() => {
+      setGenerationStep('Đang tính toán mốc giờ vàng, ẩm thực địa phương & chi phí nhóm...');
+    }, 1850);
+
+    const t3 = setTimeout(() => {
+      setGenerationStep('Đang hoàn thiện các thẻ hoạt động & mẹo du lịch thông minh...');
+    }, 2850);
+
+    const t4 = setTimeout(() => {
+      try {
+        const budgetLabel =
+          budgetTier === 'budget'
+            ? 'Tiết kiệm (~2-3tr/người)'
+            : budgetTier === 'standard'
+            ? 'Tiêu chuẩn (~4-5tr/người)'
+            : 'Sang chảnh (>8tr/người)';
+
+        const plan = generatePrototypeTripPlan({
           destination,
           startDate,
           endDate,
@@ -131,25 +151,22 @@ export const AiPlannerModal: React.FC<AiPlannerModalProps> = ({
           vibes: selectedVibes,
           pace,
           notes,
-        }),
-      });
+        });
 
-      const json = await res.json();
-      if (json && json.data) {
         playCrystalChime();
-        onApplyGeneratedPlan(json.data);
+        onApplyGeneratedPlan(plan);
+        setIsGenerating(false);
+        setGenerationStep('');
         onClose();
-      } else {
-        throw new Error(json?.message || 'Không thể tạo lịch trình');
+      } catch (err) {
+        console.error('Lỗi khi tạo lịch trình:', err);
+        setErrorMsg('Đã có sự cố khi tạo lịch trình. Vui lòng bấm thử lại!');
+        setIsGenerating(false);
+        setGenerationStep('');
       }
-    } catch (err) {
-      console.error('Lỗi khi gọi AI tạo lịch trình:', err);
-      setErrorMsg('Đã có sự cố khi kết nối AI. Vui lòng bấm thử lại!');
-    } finally {
-      clearInterval(stepTimer);
-      setIsGenerating(false);
-      setGenerationStep('');
-    }
+    }, 3600);
+
+    timersRef.current = [t1, t2, t3, t4];
   };
 
   return (
@@ -166,12 +183,12 @@ export const AiPlannerModal: React.FC<AiPlannerModalProps> = ({
               Lập kế hoạch du lịch bằng <span className="text-sky-600 dark:text-sky-400">Trí tuệ nhân tạo</span>
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Chỉ mất 10 giây để AI gợi ý lịch trình cá nhân hóa hoàn hảo cho chuyến đi của bạn.
+              Chỉ mất vài giây để AI gợi ý lịch trình cá nhân hóa hoàn hảo cho chuyến đi của bạn.
             </p>
           </div>
 
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:text-slate-300 flex items-center justify-center flex-shrink-0"
           >
             <X className="w-4 h-4" />
