@@ -117,7 +117,25 @@ export const initialTimelineActivities: TimelineActivity[] = [
     statusType: 'approved',
     iconType: 'food',
     details: 'Thực đơn: Mì Quảng ếch, tôm thịt, gà ta thả vườn',
-    note: '5 người ăn'
+    note: '5 người ăn',
+    comments: [
+      {
+        id: 'cmt-201-1',
+        activityId: 'act-201',
+        authorName: 'Khánh Huy',
+        authorRole: 'Thủ quỹ',
+        content: 'Quán này nên đi trước 8h30 kẻo đông nghẹt bàn nha mọi người!',
+        createdAt: '08:15 Hôm qua',
+      },
+      {
+        id: 'cmt-201-2',
+        activityId: 'act-201',
+        authorName: 'Minh Anh',
+        authorRole: 'Thành viên',
+        content: 'Mình ăn thử mì gà ta rồi, ngon xuất sắc luôn!',
+        createdAt: '09:00 Hôm qua',
+      },
+    ],
   },
   {
     id: 'act-202',
@@ -133,7 +151,25 @@ export const initialTimelineActivities: TimelineActivity[] = [
     iconType: 'landmark',
     imageUrl: 'https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?w=300&auto=format&fit=crop&q=80',
     details: 'Vé cáp treo khứ hồi: 900.000đ',
-    driverInfo: 'Tài xế Hùng (0912.xxx.888) đón tại sảnh khách sạn lúc 09:15'
+    driverInfo: 'Tài xế Hùng (0912.xxx.888) đón tại sảnh khách sạn lúc 09:15',
+    comments: [
+      {
+        id: 'cmt-202-1',
+        activityId: 'act-202',
+        authorName: 'Ngọc Linh',
+        authorRole: 'Nhiếp ảnh gia',
+        content: 'Buổi sáng trên cầu sương mờ chụp góc nghiêng cực kỳ nghệ thuật nhé!',
+        createdAt: '10:20 Hôm qua',
+      },
+      {
+        id: 'cmt-202-2',
+        activityId: 'act-202',
+        authorName: 'Nguyễn Việt Hùng',
+        authorRole: 'Trưởng nhóm',
+        content: 'Đã check-in mã QR vé 5 người trên app rồi nhé, đi cổng ưu tiên số 2.',
+        createdAt: '11:05 Hôm qua',
+      },
+    ],
   },
   {
     id: 'act-203',

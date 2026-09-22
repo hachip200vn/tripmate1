@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   X,
   Vote,
@@ -10,8 +10,10 @@ import {
   Tag,
   AlertCircle,
   Sparkles,
+  Check,
+  Pencil,
 } from 'lucide-react';
-import { VotePoll } from '../types';
+import { VotePoll, VoteOption } from '../types';
 
 interface CreatePollModalProps {
   isOpen: boolean;
@@ -19,6 +21,7 @@ interface CreatePollModalProps {
   destination?: string | null;
   creatorName?: string;
   onSavePoll: (poll: VotePoll) => void;
+  initialPoll?: VotePoll | null;
 }
 
 interface OptionInput {
@@ -26,6 +29,9 @@ interface OptionInput {
   title: string;
   location: string;
   priceText: string;
+  votes?: number;
+  votedByMe?: boolean;
+  voterAvatars?: string[];
 }
 
 const CATEGORIES = [
@@ -51,10 +57,12 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
   destination,
   creatorName = 'Nguyễn Việt Hùng',
   onSavePoll,
+  initialPoll,
 }) => {
   if (!isOpen) return null;
 
   const destName = destination || 'chuyến đi';
+  const isEditMode = Boolean(initialPoll);
 
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState(CATEGORIES[0]);
@@ -67,12 +75,49 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
   ]);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (initialPoll) {
+      setTitle(initialPoll.title);
+      setCategory(initialPoll.category || CATEGORIES[0]);
+      if (DEADLINE_PRESETS.includes(initialPoll.deadline)) {
+        setDeadline(initialPoll.deadline);
+        setIsCustomDeadline(false);
+        setCustomDeadline('');
+      } else {
+        setIsCustomDeadline(true);
+        setCustomDeadline(initialPoll.deadline);
+      }
+      setOptions(
+        initialPoll.options.map((opt) => ({
+          id: opt.id,
+          title: opt.title,
+          location: opt.location,
+          priceText: opt.priceText,
+          votes: opt.votes,
+          votedByMe: opt.votedByMe,
+          voterAvatars: opt.voterAvatars,
+        }))
+      );
+    } else {
+      setTitle('');
+      setCategory(CATEGORIES[0]);
+      setDeadline(DEADLINE_PRESETS[0]);
+      setCustomDeadline('');
+      setIsCustomDeadline(false);
+      setOptions([
+        { id: '1', title: '', location: destName, priceText: '' },
+        { id: '2', title: '', location: destName, priceText: '' },
+      ]);
+    }
+    setErrorMsg(null);
+  }, [initialPoll, isOpen, destName]);
+
   const handleAddOption = () => {
     if (options.length >= 8) return;
     setOptions((prev) => [
       ...prev,
       {
-        id: String(Date.now()),
+        id: `opt-${Date.now()}-${prev.length + 1}`,
         title: '',
         location: destName,
         priceText: '',
@@ -116,25 +161,25 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
       ? customDeadline.trim() || 'Hôm nay'
       : deadline;
 
-    const newPoll: VotePoll = {
-      id: `poll-${Date.now()}`,
+    const savedPoll: VotePoll = {
+      id: initialPoll ? initialPoll.id : `poll-${Date.now()}`,
       title: title.trim(),
-      creator: creatorName,
+      creator: initialPoll ? initialPoll.creator : creatorName,
       deadline: finalDeadline,
       category,
-      status: 'active',
+      status: initialPoll ? initialPoll.status : 'active',
       options: filledOptions.map((opt, idx) => ({
-        id: `opt-${Date.now()}-${idx + 1}`,
+        id: opt.id && !opt.id.startsWith('opt-') && opt.id !== '1' && opt.id !== '2' ? opt.id : opt.id || `opt-${Date.now()}-${idx + 1}`,
         title: opt.title.trim(),
         location: opt.location.trim() || destName,
         priceText: opt.priceText.trim() || 'Tự túc',
-        votes: 0,
-        votedByMe: false,
-        voterAvatars: [],
+        votes: opt.votes ?? 0,
+        votedByMe: opt.votedByMe ?? false,
+        voterAvatars: opt.voterAvatars ?? [],
       })),
     };
 
-    onSavePoll(newPoll);
+    onSavePoll(savedPoll);
     onClose();
   };
 
@@ -144,12 +189,19 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
         {/* Header */}
         <div className="flex items-start justify-between pb-3 border-b border-slate-100 dark:border-slate-800 mb-4 sticky top-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md z-10">
           <div>
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 text-[11px] font-extrabold uppercase tracking-wider mb-1">
-              <Vote className="w-3 h-3 text-sky-600" />
-              <span>Biểu quyết nhóm • {destName}</span>
-            </div>
+            {isEditMode ? (
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 text-[11px] font-extrabold uppercase tracking-wider mb-1">
+                <Pencil className="w-3 h-3 text-amber-600" />
+                <span>Chỉnh sửa cuộc bình chọn • {destName}</span>
+              </div>
+            ) : (
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 text-[11px] font-extrabold uppercase tracking-wider mb-1">
+                <Vote className="w-3 h-3 text-sky-600" />
+                <span>Biểu quyết nhóm • {destName}</span>
+              </div>
+            )}
             <h2 className="text-lg font-black text-slate-900 dark:text-slate-100">
-              Tạo cuộc bình chọn mới
+              {isEditMode ? 'Cập nhật nội dung bình chọn' : 'Tạo cuộc bình chọn mới'}
             </h2>
           </div>
           <button
@@ -366,8 +418,17 @@ export const CreatePollModal: React.FC<CreatePollModalProps> = ({
               type="submit"
               className="flex-2 h-11 rounded-2xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-sky-600/25 active:scale-[0.98] transition-all cursor-pointer"
             >
-              <Sparkles className="w-4 h-4 text-amber-300" />
-              <span>Tạo bình chọn</span>
+              {isEditMode ? (
+                <>
+                  <Check className="w-4 h-4 text-emerald-300" />
+                  <span>Lưu thay đổi</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4 text-amber-300" />
+                  <span>Tạo bình chọn</span>
+                </>
+              )}
             </button>
           </div>
         </form>

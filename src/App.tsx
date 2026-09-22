@@ -21,6 +21,8 @@ import { UpdateUserQrModal } from './components/UpdateUserQrModal';
 import { TripManagerModal } from './components/TripManagerModal';
 import { JoinTripModal } from './components/JoinTripModal';
 import { TripsListView } from './components/TripsListView';
+import { ManualTripModal } from './components/ManualTripModal';
+import { AiDestinationRecommendModal } from './components/AiDestinationRecommendModal';
 
 import {
   initialMembers,
@@ -139,10 +141,13 @@ export default function App() {
   }>({ name: 'Khánh Huy', amount: 90000, mode: 'pay' });
   const [showAddExpenseModal, setShowAddExpenseModal] = useState(false);
   const [showCreatePollModal, setShowCreatePollModal] = useState(false);
+  const [editingPoll, setEditingPoll] = useState<VotePoll | null>(null);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showUpdateQrModal, setShowUpdateQrModal] = useState(false);
   const [showTripManagerModal, setShowTripManagerModal] = useState(false);
   const [showJoinTripModal, setShowJoinTripModal] = useState(false);
+  const [showManualTripModal, setShowManualTripModal] = useState(false);
+  const [showAiRecommendModal, setShowAiRecommendModal] = useState(false);
 
   // Selected trip for Invite Modal (defaults to activeTrip)
   const [tripForInvite, setTripForInvite] = useState<Trip | null>(null);
@@ -353,24 +358,60 @@ export default function App() {
 
   // Create Poll trigger
   const handleCreatePoll = () => {
+    setEditingPoll(null);
     setShowCreatePollModal(true);
   };
 
-  const handleSaveNewPoll = (newPoll: VotePoll) => {
-    if (!activeTrip) return;
+  // Edit Poll trigger
+  const handleEditPoll = (poll: VotePoll) => {
+    setEditingPoll(poll);
+    setShowCreatePollModal(true);
+  };
 
+  // Delete Poll trigger
+  const handleDeletePoll = (pollId: string) => {
+    if (!activeTrip) return;
+    const pollToRemove = activeTrip.polls.find((p) => p.id === pollId);
     setTrips((prev) =>
       prev.map((t) =>
         t.id === activeTrip.id
           ? {
               ...t,
-              polls: [newPoll, ...t.polls],
+              polls: t.polls.filter((p) => p.id !== pollId),
             }
           : t
       )
     );
+    showToast(`Đã xóa cuộc bình chọn: "${pollToRemove?.title || 'Bình chọn'}"! 🗑️`);
+  };
 
-    showToast(`Đã tạo cuộc biểu quyết: "${newPoll.title}"! 🗳️`);
+  // Save (Create or Update) Poll
+  const handleSavePoll = (savedPoll: VotePoll) => {
+    if (!activeTrip) return;
+
+    const isExisting = activeTrip.polls.some((p) => p.id === savedPoll.id);
+
+    setTrips((prev) =>
+      prev.map((t) => {
+        if (t.id !== activeTrip.id) return t;
+
+        const updatedPolls = isExisting
+          ? t.polls.map((p) => (p.id === savedPoll.id ? savedPoll : p))
+          : [savedPoll, ...t.polls];
+
+        return {
+          ...t,
+          polls: updatedPolls,
+        };
+      })
+    );
+
+    if (isExisting) {
+      showToast(`Đã cập nhật cuộc bình chọn: "${savedPoll.title}"! ✏️`);
+    } else {
+      showToast(`Đã tạo cuộc biểu quyết: "${savedPoll.title}"! 🗳️`);
+    }
+    setEditingPoll(null);
   };
 
   // Direct add member from invite modal
@@ -541,6 +582,56 @@ export default function App() {
     showToast('Đã xóa hoạt động khỏi lịch trình');
   };
 
+  // Activity Comments Handlers
+  const handleAddActivityComment = (activityId: string, content: string) => {
+    if (!activeTrip) return;
+    const newComment = {
+      id: `cmt-${Date.now()}`,
+      activityId,
+      authorName: userName,
+      authorRole: activeTrip.userRole || 'Thành viên',
+      content,
+      createdAt: 'Vừa xong',
+    };
+
+    setTrips((prev) =>
+      prev.map((t) => {
+        if (t.id !== activeTrip.id) return t;
+        return {
+          ...t,
+          activities: t.activities.map((act) => {
+            if (act.id !== activityId) return act;
+            return {
+              ...act,
+              comments: [...(act.comments || []), newComment],
+            };
+          }),
+        };
+      })
+    );
+    showToast('Đã gửi bình luận thành công! 💬');
+  };
+
+  const handleDeleteActivityComment = (activityId: string, commentId: string) => {
+    if (!activeTrip) return;
+    setTrips((prev) =>
+      prev.map((t) => {
+        if (t.id !== activeTrip.id) return t;
+        return {
+          ...t,
+          activities: t.activities.map((act) => {
+            if (act.id !== activityId) return act;
+            return {
+              ...act,
+              comments: (act.comments || []).filter((c) => c.id !== commentId),
+            };
+          }),
+        };
+      })
+    );
+    showToast('Đã xóa bình luận.');
+  };
+
   // Optimize route simulation
   const handleOptimizeRoute = () => {
     showToast('AI đã tối ưu lộ trình: Tiết kiệm 45 phút di chuyển!');
@@ -595,7 +686,8 @@ export default function App() {
                     handleSelectTrip(id);
                     setCurrentTab('lich-trinh');
                   }}
-                  onOpenCreateWithAi={() => setShowAiPlannerModal(true)}
+                  onOpenCreateWithAi={() => setShowAiRecommendModal(true)}
+                  onOpenManualCreate={() => setShowManualTripModal(true)}
                   onOpenJoinTrip={() => setShowJoinTripModal(true)}
                   onOpenInviteForTrip={(t) => {
                     setTripForInvite(t);
@@ -623,13 +715,23 @@ export default function App() {
                   tripTitle={activeTrip?.title}
                   tripDatesSummary={activeTrip?.datesSummary}
                   tripCoverImage={activeTrip?.coverImage}
+                  tripOrigin={activeTrip?.origin}
+                  tripDestination={activeTrip?.destination}
+                  tripBudgetPerPerson={activeTrip?.budgetPerPerson}
+                  tripBudgetTotal={activeTrip?.budgetTotal}
+                  tripDepartureTime={activeTrip?.departureTime}
+                  tripReturnTime={activeTrip?.returnTime}
+                  tripTravelStyle={activeTrip?.travelStyle}
+                  currentUserName={userName}
                   aiSummary={activeTrip?.aiSummary}
                   trips={trips}
                   currentTripId={currentTripId}
                   onSelectTrip={handleSelectTrip}
                   onOpenTripManager={() => setCurrentTab('chuyen-di')}
                   onOpenJoinTrip={() => setShowJoinTripModal(true)}
-                  onOpenAiPlanner={() => setShowAiPlannerModal(true)}
+                  onOpenManualCreateTrip={() => setShowManualTripModal(true)}
+                  onOpenAiRecommendTrip={() => setShowAiRecommendModal(true)}
+                  onOpenAiPlanner={() => setShowAiRecommendModal(true)}
                   onAddActivity={handleAddActivity}
                   onOpenInviteModal={() => {
                     setTripForInvite(activeTrip);
@@ -645,6 +747,8 @@ export default function App() {
                   onOptimizeRoute={handleOptimizeRoute}
                   onUpdateActivityStatus={handleUpdateActivityStatus}
                   onDeleteActivity={handleDeleteActivity}
+                  onAddActivityComment={handleAddActivityComment}
+                  onDeleteActivityComment={handleDeleteActivityComment}
                   onResetTrip={() => {
                     if (activeTrip) {
                       handleDeleteTrip(activeTrip.id);
@@ -684,6 +788,8 @@ export default function App() {
                   currentDestination={activeTrip?.destination}
                   onVoteOption={handleVoteOption}
                   onCreatePoll={handleCreatePoll}
+                  onEditPoll={handleEditPoll}
+                  onDeletePoll={handleDeletePoll}
                   onSwitchToItinerary={() => setCurrentTab('lich-trinh')}
                   onOpenAiPlanner={() => {
                     setCurrentTab('lich-trinh');
@@ -836,13 +942,17 @@ export default function App() {
           onAddExpense={handleAddExpense}
         />
 
-        {/* Create Poll Modal */}
+        {/* Create / Edit Poll Modal */}
         <CreatePollModal
           isOpen={showCreatePollModal}
-          onClose={() => setShowCreatePollModal(false)}
+          onClose={() => {
+            setShowCreatePollModal(false);
+            setEditingPoll(null);
+          }}
           destination={activeTrip?.destination}
           creatorName={userName}
-          onSavePoll={handleSaveNewPoll}
+          onSavePoll={handleSavePoll}
+          initialPoll={editingPoll}
         />
 
         {/* Invite Members Modal */}
@@ -886,6 +996,38 @@ export default function App() {
           isOpen={showJoinTripModal}
           onClose={() => setShowJoinTripModal(false)}
           onJoinTrip={handleJoinTripByCode}
+        />
+
+        {/* Manual Trip Creation Modal */}
+        <ManualTripModal
+          isOpen={showManualTripModal}
+          onClose={() => setShowManualTripModal(false)}
+          onApplyManualTrip={(plan) => {
+            handleApplyAiGeneratedPlan(plan);
+            setShowManualTripModal(false);
+          }}
+          onCreateTrip={(plan) => {
+            handleApplyAiGeneratedPlan(plan);
+            setShowManualTripModal(false);
+          }}
+        />
+
+        {/* AI Auto Destination Recommendation Modal */}
+        <AiDestinationRecommendModal
+          isOpen={showAiRecommendModal}
+          onClose={() => setShowAiRecommendModal(false)}
+          onApplyPlan={(plan) => {
+            handleApplyAiGeneratedPlan(plan);
+            setShowAiRecommendModal(false);
+          }}
+          onApplyTripPlan={(plan) => {
+            handleApplyAiGeneratedPlan(plan);
+            setShowAiRecommendModal(false);
+          }}
+          onOpenManualPlanner={() => {
+            setShowAiRecommendModal(false);
+            setShowManualTripModal(true);
+          }}
         />
       </div>
     </div>

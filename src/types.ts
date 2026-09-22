@@ -16,6 +16,7 @@ export type Trip = {
   id: string;
   title: string;
   destination: string;
+  departureLocation?: string;
   datesSummary: string;
   startDate?: string;
   endDate?: string;
@@ -30,18 +31,27 @@ export type Trip = {
   polls: VotePoll[];
   expenses: ExpenseItem[];
   aiSummary?: string;
+  transportType?: string;
+  estimatedBudget?: number;
+  notes?: string;
   createdAt?: string;
 };
 
 export type TripPlanData = {
   tripTitle: string;
   destination: string;
+  departureLocation?: string;
   datesSummary: string;
+  startDate?: string;
+  endDate?: string;
   totalDays: number;
   coverImage?: string;
   days: TripDay[];
   activities: TimelineActivity[];
   aiSummary?: string;
+  transportType?: string;
+  estimatedBudget?: number;
+  notes?: string;
 };
 
 export type TimelineActivity = {
@@ -51,6 +61,8 @@ export type TimelineActivity = {
   category: string;
   title: string;
   location: string;
+  departureLocation?: string;
+  destinationLocation?: string;
   costText?: string;
   pricePerPerson?: number;
   statusText: string;

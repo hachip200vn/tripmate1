@@ -47,12 +47,15 @@ interface ItineraryViewProps {
   tripDatesSummary?: string;
   tripCoverImage?: string;
   aiSummary?: string;
+  departureLocation?: string;
+  transportType?: string;
   trips?: Trip[];
   currentTripId?: string;
   onSelectTrip?: (tripId: string) => void;
   onOpenTripManager?: () => void;
   onOpenJoinTrip?: () => void;
   onOpenAiPlanner: () => void;
+  onOpenManualTrip?: () => void;
   onAddActivity: () => void;
   onOpenInviteModal: () => void;
   onVoteAgain: (activityTitle: string) => void;
@@ -77,12 +80,15 @@ export const ItineraryView: React.FC<ItineraryViewProps> = ({
   tripDatesSummary,
   tripCoverImage,
   aiSummary,
+  departureLocation,
+  transportType,
   trips = [],
   currentTripId,
   onSelectTrip,
   onOpenTripManager,
   onOpenJoinTrip,
   onOpenAiPlanner,
+  onOpenManualTrip,
   onAddActivity,
   onOpenInviteModal,
   onVoteAgain,
@@ -179,11 +185,25 @@ export const ItineraryView: React.FC<ItineraryViewProps> = ({
         </p>
 
         <div className="w-full max-w-xs space-y-2.5">
+          {onOpenManualTrip && (
+            <button
+              onClick={onOpenManualTrip}
+              className="w-full h-12 rounded-2xl bg-sky-700 hover:bg-sky-800 text-white font-extrabold text-sm flex items-center justify-center gap-2 shadow-xl shadow-sky-700/25 active:scale-[0.98] transition-all cursor-pointer"
+            >
+              <Compass className="w-4 h-4 text-sky-200" />
+              <span>Tạo lịch trình thủ công</span>
+            </button>
+          )}
+
           <button
             onClick={onOpenAiPlanner}
-            className="w-full h-12 rounded-2xl bg-sky-700 hover:bg-sky-800 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-xl shadow-sky-700/25 active:scale-[0.98] transition-all cursor-pointer"
+            className={`w-full h-12 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
+              onOpenManualTrip
+                ? 'bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 border border-slate-200 dark:border-slate-700 shadow-sm'
+                : 'bg-sky-700 hover:bg-sky-800 text-white shadow-xl shadow-sky-700/25 active:scale-[0.98]'
+            }`}
           >
-            <Sparkles className="w-4 h-4 text-amber-300" />
+            <Sparkles className="w-4 h-4 text-amber-400" />
             <span>Lập lịch trình với AI</span>
           </button>
 
@@ -295,6 +315,18 @@ export const ItineraryView: React.FC<ItineraryViewProps> = ({
           </div>
 
           <div className="flex items-center gap-1.5">
+            {onOpenManualTrip && (
+              <button
+                type="button"
+                onClick={onOpenManualTrip}
+                className="h-8 px-2.5 rounded-full bg-emerald-600/90 hover:bg-emerald-600 backdrop-blur-md flex items-center gap-1 text-white text-[11px] font-bold transition-all shadow-xs active:scale-95 cursor-pointer"
+                title="Tạo lịch trình thủ công (tự nhập điểm đi, điểm đến)"
+              >
+                <Compass className="w-3.5 h-3.5 text-emerald-200" />
+                <span className="hidden xs:inline">Tạo thủ công</span>
+                <span className="xs:hidden">+ Thủ công</span>
+              </button>
+            )}
             {onOpenTripManager && trips.length > 0 && (
               <button
                 type="button"
@@ -333,9 +365,20 @@ export const ItineraryView: React.FC<ItineraryViewProps> = ({
             {tripTitle || 'Lịch trình du lịch'}
           </h2>
           <div className="flex items-center justify-between">
-            <span className="text-xs text-sky-200 font-semibold drop-shadow flex items-center gap-1">
-              <MapPin className="w-3.5 h-3.5 text-sky-400" />
-              {currentActivities[0]?.location || 'Việt Nam'}
+            <span className="text-xs text-sky-200 font-semibold drop-shadow flex items-center gap-1.5">
+              <MapPin className="w-3.5 h-3.5 text-sky-400 flex-shrink-0" />
+              {departureLocation ? (
+                <span className="truncate">
+                  {departureLocation} ➔ {currentActivities[0]?.location?.split('➔')[1] || currentActivities[0]?.location || 'Điểm đến'}
+                </span>
+              ) : (
+                <span className="truncate">{currentActivities[0]?.location || 'Việt Nam'}</span>
+              )}
+              {transportType && (
+                <span className="px-2 py-0.2 rounded-md bg-white/20 backdrop-blur-md text-[10px] text-white font-bold ml-1">
+                  {transportType}
+                </span>
+              )}
             </span>
             <div className="flex -space-x-1.5 overflow-hidden">
               {members.map((m) => (

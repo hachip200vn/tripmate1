@@ -26,6 +26,7 @@ interface TripsListViewProps {
   onBack?: () => void;
   onSelectTrip: (tripId: string) => void;
   onOpenCreateWithAi: () => void;
+  onOpenManualCreate?: () => void;
   onOpenJoinTrip: () => void;
   onOpenInviteForTrip: (trip: Trip) => void;
   onDeleteTrip: (tripId: string) => void;
@@ -36,6 +37,7 @@ export const TripsListView: React.FC<TripsListViewProps> = ({
   currentTripId,
   onSelectTrip,
   onOpenCreateWithAi,
+  onOpenManualCreate,
   onOpenJoinTrip,
   onOpenInviteForTrip,
   onDeleteTrip,
@@ -375,17 +377,29 @@ export const TripsListView: React.FC<TripsListViewProps> = ({
         )}
       </div>
 
-      {/* Nút Tạo lịch trình mới để xuống cuối cho gọn */}
-      <div className="mt-5 pt-3">
+      {/* Nút Tạo lịch trình mới (Tự động AI + Thủ công) */}
+      <div className="mt-5 pt-3 space-y-2.5">
         <button
           type="button"
           onClick={onOpenCreateWithAi}
           className="w-full h-12 rounded-2xl bg-gradient-to-r from-sky-600 via-sky-700 to-indigo-600 hover:from-sky-700 hover:to-indigo-700 text-white font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg shadow-sky-600/25 active:scale-[0.98] transition-all cursor-pointer"
-          title="Tạo lịch trình mới bằng AI"
+          title="Gợi ý tự động 5 điểm đến xếp theo % phù hợp"
         >
           <Sparkles className="w-4 h-4 text-amber-300" />
-          <span>Tạo lịch trình mới với AI</span>
+          <span>Gợi ý điểm đến tự động với AI (Top 5 %)</span>
         </button>
+
+        {onOpenManualCreate && (
+          <button
+            type="button"
+            onClick={onOpenManualCreate}
+            className="w-full h-11 rounded-2xl bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/80 text-slate-800 dark:text-slate-200 font-bold text-xs flex items-center justify-center gap-2 border border-slate-200 dark:border-slate-700 shadow-2xs active:scale-[0.98] transition-all cursor-pointer"
+            title="Tự nhập điểm đi, điểm đến, ngân sách..."
+          >
+            <Compass className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
+            <span>Tự tạo lịch trình thủ công</span>
+          </button>
+        )}
       </div>
     </div>
   );
