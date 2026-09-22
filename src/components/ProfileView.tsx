@@ -6,7 +6,6 @@ import {
   Lock,
   Moon,
   Sun,
-  SlidersHorizontal,
   Bell,
   ChevronRight,
   LogOut,
@@ -14,7 +13,9 @@ import {
   CreditCard,
   FileText,
   HelpCircle,
-  Sparkles
+  Sparkles,
+  Compass,
+  Layers
 } from 'lucide-react';
 
 interface ProfileViewProps {
@@ -22,11 +23,12 @@ interface ProfileViewProps {
   userEmail?: string;
   userPhone: string;
   darkMode: boolean;
+  tripsCount?: number;
   onToggleDarkMode: () => void;
   onOpenPhoneModal: () => void;
   onOpenPasswordModal: () => void;
-  onOpenUtilitiesModal: () => void;
   onOpenNotifications: () => void;
+  onOpenTripManager?: () => void;
   onLogoutOrSwitchAccount: () => void;
 }
 
@@ -35,11 +37,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
   userEmail = 'nguyenviethung.co@gmail.com',
   userPhone,
   darkMode,
+  tripsCount = 1,
   onToggleDarkMode,
   onOpenPhoneModal,
   onOpenPasswordModal,
-  onOpenUtilitiesModal,
   onOpenNotifications,
+  onOpenTripManager,
   onLogoutOrSwitchAccount,
 }) => {
   return (
@@ -65,12 +68,49 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
             <span className="px-2.5 py-0.5 rounded-full bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 text-[10px] font-bold">
               Explorer Lv. 3
             </span>
-            <span className="px-2.5 py-0.5 rounded-full bg-orange-50 dark:bg-orange-950/60 text-orange-700 dark:text-orange-300 text-[10px] font-bold">
-              14 Chuyến đi
-            </span>
+            {onOpenTripManager ? (
+              <button
+                type="button"
+                onClick={onOpenTripManager}
+                className="px-2.5 py-0.5 rounded-full bg-orange-50 hover:bg-orange-100 dark:bg-orange-950/60 dark:hover:bg-orange-900 text-orange-700 dark:text-orange-300 text-[10px] font-bold flex items-center gap-1 transition-colors cursor-pointer"
+              >
+                <span>{tripsCount} Chuyến đi</span>
+                <ChevronRight className="w-3 h-3" />
+              </button>
+            ) : (
+              <span className="px-2.5 py-0.5 rounded-full bg-orange-50 dark:bg-orange-950/60 text-orange-700 dark:text-orange-300 text-[10px] font-bold">
+                {tripsCount} Chuyến đi
+              </span>
+            )}
           </div>
         </div>
       </div>
+
+      {/* Trips Shortcut Card */}
+      {onOpenTripManager && (
+        <div className="mb-5">
+          <div className="bg-gradient-to-r from-sky-600 to-indigo-600 rounded-3xl p-4 text-white shadow-md flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white">
+                <Compass className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-black">Quản lý nhiều chuyến đi</h3>
+                <p className="text-xs text-sky-100">
+                  Bạn đang tham gia & quản lý {tripsCount} chuyến du lịch
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={onOpenTripManager}
+              className="px-3 py-1.5 rounded-xl bg-white text-sky-800 text-xs font-bold hover:bg-sky-50 shadow-sm active:scale-95 transition-all cursor-pointer"
+            >
+              Xem ngay
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Account Security Group */}
       <div className="mb-5">
@@ -140,37 +180,13 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
         </div>
       </div>
 
-      {/* Preferences & Utility Dashboard */}
+      {/* Preferences & Theme */}
       <div className="mb-5">
         <h3 className="text-xs uppercase font-extrabold text-slate-400 tracking-wider mb-2 px-1">
-          Cá nhân hóa & Tiện ích
+          Cài đặt & Giao diện
         </h3>
 
         <div className="bg-white dark:bg-slate-800/90 rounded-3xl p-2 border border-slate-200/90 dark:border-slate-700 shadow-sm divide-y divide-slate-100 dark:divide-slate-700/70">
-          {/* Utility Dashboard Button */}
-          <button
-            onClick={onOpenUtilitiesModal}
-            className="w-full p-3.5 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-750 rounded-2xl transition-colors text-left"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-sky-100 dark:bg-sky-900/50 text-sky-600 dark:text-sky-300 flex items-center justify-center">
-                <SlidersHorizontal className="w-5 h-5" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <p className="text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200">
-                    Bảng điều khiển cá nhân hóa tiện ích
-                  </p>
-                  <span className="text-[10px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-orange-500 text-white">
-                    HOT
-                  </span>
-                </div>
-                <p className="text-[11px] text-slate-400">Đổi ngoại tệ, checklist vali, SOS, âm thanh thiên nhiên</p>
-              </div>
-            </div>
-            <ChevronRight className="w-4 h-4 text-slate-400" />
-          </button>
-
           {/* Dark Mode Toggle row */}
           <div className="w-full p-3.5 flex items-center justify-between">
             <div className="flex items-center gap-3">

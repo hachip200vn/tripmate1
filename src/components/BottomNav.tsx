@@ -21,7 +21,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({ currentTab, onChangeTab })
       <div className="max-w-md mx-auto h-full px-2 flex justify-around items-center">
         {tabs.map((tab) => {
           const Icon = tab.icon;
-          const isActive = currentTab === tab.id;
+          const isActive = currentTab === tab.id || (tab.id === 'lich-trinh' && currentTab === 'chuyen-di');
 
           return (
             <button

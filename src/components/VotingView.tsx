@@ -1,5 +1,5 @@
 import React from 'react';
-import { Vote, Clock, CheckCircle2, Plus, Sparkles, MapPin, ArrowRight, Calendar } from 'lucide-react';
+import { Vote, Clock, CheckCircle2, Plus, Sparkles, MapPin } from 'lucide-react';
 import { VotePoll } from '../types';
 
 interface VotingViewProps {
@@ -61,18 +61,7 @@ export const VotingView: React.FC<VotingViewProps> = ({
           >
             <Sparkles className="w-4 h-4" />
             <span>Tạo lịch trình ngay</span>
-            <ArrowRight className="w-4 h-4 ml-1" />
           </button>
-
-          {onSwitchToItinerary && (
-            <button
-              onClick={onSwitchToItinerary}
-              className="w-full h-12 rounded-2xl bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-colors"
-            >
-              <Calendar className="w-4 h-4 text-slate-400" />
-              <span>Xem tab Lịch trình</span>
-            </button>
-          )}
         </div>
       </div>
     );

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   X,
   Sparkles,
@@ -8,8 +8,6 @@ import {
   Wallet,
   Compass,
   Sliders,
-  Volume2,
-  Play,
   Check,
   PlaneTakeoff,
   PlaneLanding,
@@ -17,7 +15,8 @@ import {
   Loader2,
   Search,
   Map,
-  Navigation
+  Navigation,
+  AlertCircle
 } from 'lucide-react';
 import { TripPlanData } from '../types';
 import { generatePrototypeTripPlan } from '../data/tripData';
@@ -54,7 +53,6 @@ export const AiPlannerModal: React.FC<AiPlannerModalProps> = ({
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationStep, setGenerationStep] = useState('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [chimePlaying, setChimePlaying] = useState(false);
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   // Close destination dropdown when clicking outside
@@ -119,39 +117,73 @@ export const AiPlannerModal: React.FC<AiPlannerModalProps> = ({
     );
   };
 
-  // Play Crystal Chime using Web Audio API
-  const playCrystalChime = () => {
-    try {
-      setChimePlaying(true);
-      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const frequencies = [523.25, 659.25, 783.99, 1046.5]; // C5, E5, G5, C6 arpeggio
-
-      frequencies.forEach((freq, idx) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.08);
-
-        gain.gain.setValueAtTime(0, ctx.currentTime + idx * 0.08);
-        gain.gain.linearRampToValueAtTime(0.15, ctx.currentTime + idx * 0.08 + 0.02);
-        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + idx * 0.08 + 0.6);
-
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-
-        osc.start(ctx.currentTime + idx * 0.08);
-        osc.stop(ctx.currentTime + idx * 0.08 + 0.65);
-      });
-
-      setTimeout(() => setChimePlaying(false), 800);
-    } catch (e) {
-      console.warn('Audio chime error', e);
-      setChimePlaying(false);
-    }
+  // Date helper functions
+  const formatVietnameseDate = (isoStr: string): string => {
+    if (!isoStr) return '';
+    const [y, m, d] = isoStr.split('-').map(Number);
+    if (!y || !m || !d) return isoStr;
+    const dateObj = new Date(y, m - 1, d);
+    const weekdays = ['Chủ nhật', 'Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy'];
+    const dayName = weekdays[dateObj.getDay()];
+    const dd = String(d).padStart(2, '0');
+    const mm = String(m).padStart(2, '0');
+    return `${dayName}, ${dd}/${mm}/${y}`;
   };
 
+  const formatShortDate = (isoStr: string): string => {
+    if (!isoStr) return '';
+    const [y, m, d] = isoStr.split('-').map(Number);
+    if (!y || !m || !d) return isoStr;
+    const dd = String(d).padStart(2, '0');
+    const mm = String(m).padStart(2, '0');
+    return `${dd}/${mm}/${y}`;
+  };
+
+  const isDateReversed = useMemo(() => {
+    if (!startDate || !endDate) return false;
+    return startDate > endDate;
+  }, [startDate, endDate]);
+
+  const durationInfo = useMemo(() => {
+    if (!startDate || !endDate) {
+      return { isValid: false, isReversed: false, label: 'Chưa chọn đủ ngày', diffDays: 0, nights: 0 };
+    }
+    const [sy, sm, sd] = startDate.split('-').map(Number);
+    const [ey, em, ed] = endDate.split('-').map(Number);
+    const s = new Date(sy, sm - 1, sd);
+    const e = new Date(ey, em - 1, ed);
+
+    if (s.getTime() > e.getTime()) {
+      return {
+        isValid: false,
+        isReversed: true,
+        label: 'Ngày không hợp lệ',
+        diffDays: 0,
+        nights: 0,
+      };
+    }
+
+    const diffTime = e.getTime() - s.getTime();
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    const nights = Math.max(0, diffDays - 1);
+    const label = diffDays === 1 ? '1 ngày (đi trong ngày)' : `${diffDays} ngày ${nights} đêm`;
+
+    return {
+      isValid: true,
+      isReversed: false,
+      label,
+      diffDays,
+      nights,
+    };
+  }, [startDate, endDate]);
+
   const handleGenerate = () => {
+    // Validate that departure date is not greater than return date
+    if (isDateReversed) {
+      setErrorMsg('Lỗi: Ngày đi không được lớn hơn ngày về! Vui lòng chọn ngày về muộn hơn hoặc trùng với ngày đi.');
+      return;
+    }
+
     setIsGenerating(true);
     setErrorMsg(null);
     setGenerationStep('Đang kích hoạt TripMate AI Core Engine...');
@@ -191,7 +223,6 @@ export const AiPlannerModal: React.FC<AiPlannerModalProps> = ({
           notes,
         });
 
-        playCrystalChime();
         onApplyGeneratedPlan(plan);
         setIsGenerating(false);
         setGenerationStep('');
@@ -393,42 +424,95 @@ export const AiPlannerModal: React.FC<AiPlannerModalProps> = ({
           </div>
 
           {/* 2. Dates */}
-          <div className="bg-slate-50 dark:bg-slate-800/60 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700">
+          <div className={`p-3.5 rounded-2xl border transition-colors ${
+            isDateReversed
+              ? 'bg-rose-50/50 dark:bg-rose-950/20 border-rose-300 dark:border-rose-900'
+              : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700'
+          }`}>
             <div className="flex items-center justify-between mb-2">
               <label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
                 <Calendar className="w-4 h-4 text-sky-600" />
                 Thời gian chuyến đi
               </label>
-              <span className="text-[10px] font-bold text-orange-700 bg-orange-100 dark:bg-orange-950/60 px-2 py-0.5 rounded-full">
-                4 ngày 3 đêm
-              </span>
+              {isDateReversed ? (
+                <span className="text-[10px] font-extrabold text-rose-700 bg-rose-100 dark:bg-rose-950/80 px-2 py-0.5 rounded-full flex items-center gap-1 border border-rose-200 dark:border-rose-800">
+                  <AlertCircle className="w-3 h-3 text-rose-600" />
+                  Ngày không hợp lệ
+                </span>
+              ) : (
+                <span className="text-[10px] font-bold text-orange-700 bg-orange-100 dark:bg-orange-950/60 px-2 py-0.5 rounded-full">
+                  {durationInfo.label}
+                </span>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-2">
-              <div className="bg-white dark:bg-slate-900 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700">
-                <span className="text-[10px] text-slate-400 flex items-center gap-1">
+              <div className={`p-2.5 rounded-xl border bg-white dark:bg-slate-900 transition-colors ${
+                isDateReversed ? 'border-rose-300 dark:border-rose-800 ring-1 ring-rose-400/40' : 'border-slate-200 dark:border-slate-700'
+              }`}>
+                <span className="text-[10px] text-slate-400 flex items-center gap-1 font-semibold">
                   <PlaneTakeoff className="w-3 h-3 text-sky-600" /> Ngày đi
                 </span>
                 <input
                   type="date"
                   value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
+                  onChange={(e) => {
+                    setStartDate(e.target.value);
+                    if (errorMsg) setErrorMsg(null);
+                  }}
                   className="w-full bg-transparent font-black text-xs text-slate-800 dark:text-slate-100 outline-none mt-1"
                 />
+                <div className="mt-1 text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate">
+                  {formatVietnameseDate(startDate)}
+                </div>
               </div>
 
-              <div className="bg-white dark:bg-slate-900 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700">
-                <span className="text-[10px] text-slate-400 flex items-center gap-1">
+              <div className={`p-2.5 rounded-xl border bg-white dark:bg-slate-900 transition-colors ${
+                isDateReversed ? 'border-rose-300 dark:border-rose-800 ring-1 ring-rose-400/40' : 'border-slate-200 dark:border-slate-700'
+              }`}>
+                <span className="text-[10px] text-slate-400 flex items-center gap-1 font-semibold">
                   <PlaneLanding className="w-3 h-3 text-orange-500" /> Ngày về
                 </span>
                 <input
                   type="date"
                   value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
+                  onChange={(e) => {
+                    setEndDate(e.target.value);
+                    if (errorMsg) setErrorMsg(null);
+                  }}
                   className="w-full bg-transparent font-black text-xs text-slate-800 dark:text-slate-100 outline-none mt-1"
                 />
+                <div className="mt-1 text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate">
+                  {formatVietnameseDate(endDate)}
+                </div>
               </div>
             </div>
+
+            {/* Error banner when start date > end date */}
+            {isDateReversed && (
+              <div className="mt-2.5 p-2.5 rounded-xl bg-rose-100/90 dark:bg-rose-950/60 border border-rose-300 dark:border-rose-800 text-rose-800 dark:text-rose-200 text-xs font-semibold flex items-start gap-2 animate-in fade-in">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-600 dark:text-rose-400 mt-0.5" />
+                <div>
+                  <p className="font-extrabold text-xs text-rose-700 dark:text-rose-300">Lỗi: Ngày đi không được lớn hơn ngày về!</p>
+                  <p className="text-[11px] font-normal text-rose-700/90 dark:text-rose-300/90 mt-0.5">
+                    Ngày đi ({formatShortDate(startDate)}) đang sau ngày về ({formatShortDate(endDate)}). Vui lòng chọn lại ngày về muộn hơn hoặc trùng với ngày đi.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Formatted Date Confirmation Bar */}
+            {!isDateReversed && startDate && endDate && (
+              <div className="mt-2.5 p-2 rounded-xl bg-sky-50/80 dark:bg-sky-950/40 border border-sky-100 dark:border-sky-900/40 flex items-center justify-between text-xs animate-in fade-in">
+                <span className="text-slate-500 dark:text-slate-400 text-[11px] flex items-center gap-1 font-medium">
+                  <Check className="w-3.5 h-3.5 text-emerald-600" />
+                  Khoảng thời gian chuẩn:
+                </span>
+                <span className="font-extrabold text-sky-800 dark:text-sky-300 text-[11px]">
+                  {formatShortDate(startDate)} → {formatShortDate(endDate)} ({durationInfo.label})
+                </span>
+              </div>
+            )}
           </div>
 
           {/* 3. Members Count */}
@@ -618,38 +702,15 @@ export const AiPlannerModal: React.FC<AiPlannerModalProps> = ({
               className="w-full p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-800 dark:text-slate-100 placeholder:text-slate-400 outline-none resize-none focus:ring-2 focus:ring-sky-500/20"
             />
           </div>
-
-          {/* 8. Sound & Haptic Preview */}
-          <div className="bg-sky-50 dark:bg-slate-800 p-3 rounded-2xl border border-sky-200 dark:border-slate-700 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-sky-600 text-white flex items-center justify-center">
-                <Volume2 className="w-4 h-4" />
-              </div>
-              <div>
-                <p className="text-xs font-bold text-slate-800 dark:text-slate-100">
-                  Hiệu ứng Âm thanh & Rung Haptic
-                </p>
-                <p className="text-[10px] text-slate-500 dark:text-slate-400">
-                  Chuông pha lê • Phản hồi AI hoàn tất
-                </p>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={playCrystalChime}
-              className="px-2.5 py-1 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold flex items-center gap-1 transition-colors"
-            >
-              <Play className="w-3 h-3" />
-              <span>{chimePlaying ? 'Đang phát' : 'Nghe thử'}</span>
-            </button>
-          </div>
         </div>
 
         {/* Error Message */}
         {errorMsg && (
           <div className="mt-4 p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 text-rose-600 dark:text-rose-400 text-xs font-semibold flex items-center justify-between">
-            <span>{errorMsg}</span>
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-600" />
+              <span>{errorMsg}</span>
+            </div>
             <button
               onClick={handleGenerate}
               className="px-2.5 py-1 rounded-lg bg-rose-600 text-white text-[11px] font-bold"
@@ -676,10 +737,19 @@ export const AiPlannerModal: React.FC<AiPlannerModalProps> = ({
         <div className="mt-5 pt-3 border-t border-slate-100 dark:border-slate-800">
           <button
             onClick={handleGenerate}
-            disabled={isGenerating}
-            className="w-full h-13 rounded-2xl bg-gradient-to-r from-sky-600 via-sky-700 to-orange-500 hover:opacity-95 text-white font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg shadow-sky-600/25 active:scale-[0.98] transition-all disabled:opacity-60 cursor-pointer disabled:cursor-not-allowed"
+            disabled={isGenerating || isDateReversed}
+            className={`w-full h-13 rounded-2xl font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg transition-all ${
+              isDateReversed
+                ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-300 dark:border-slate-700 cursor-not-allowed shadow-none'
+                : 'bg-gradient-to-r from-sky-600 via-sky-700 to-orange-500 hover:opacity-95 text-white shadow-sky-600/25 active:scale-[0.98] cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed'
+            }`}
           >
-            {isGenerating ? (
+            {isDateReversed ? (
+              <>
+                <AlertCircle className="w-5 h-5 text-rose-500" />
+                <span>Ngày đi lớn hơn ngày về — Vui lòng sửa lại</span>
+              </>
+            ) : isGenerating ? (
               <>
                 <Loader2 className="w-5 h-5 animate-spin text-white" />
                 <span>AI đang phân tích & lên lịch trình...</span>

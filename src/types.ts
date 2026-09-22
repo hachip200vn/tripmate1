@@ -1,4 +1,4 @@
-export type NavTab = 'kham-pha' | 'lich-trinh' | 'binh-chon' | 'ngan-sach' | 'tai-khoan';
+export type NavTab = 'kham-pha' | 'lich-trinh' | 'chuyen-di' | 'binh-chon' | 'ngan-sach' | 'tai-khoan';
 export type NavigationTab = NavTab;
 
 export type TripDay = {
@@ -7,6 +7,30 @@ export type TripDay = {
   displayDate: string;
   title: string;
   activitiesCount: number;
+};
+
+export type TripRole = 'Trưởng nhóm' | 'Thành viên' | 'Thủ quỹ';
+export type TripStatus = 'active' | 'upcoming' | 'completed';
+
+export type Trip = {
+  id: string;
+  title: string;
+  destination: string;
+  datesSummary: string;
+  startDate?: string;
+  endDate?: string;
+  totalDays: number;
+  coverImage?: string;
+  status: TripStatus;
+  userRole: TripRole;
+  inviteCode: string;
+  days: TripDay[];
+  activities: TimelineActivity[];
+  members: Member[];
+  polls: VotePoll[];
+  expenses: ExpenseItem[];
+  aiSummary?: string;
+  createdAt?: string;
 };
 
 export type TripPlanData = {
@@ -30,7 +54,7 @@ export type TimelineActivity = {
   costText?: string;
   pricePerPerson?: number;
   statusText: string;
-  statusType: 'approved' | 'booked' | 'voted' | 'pending' | 'transport';
+  statusType: 'approved' | 'booked' | 'voted' | 'pending' | 'transport' | 'completed' | 'cancelled';
   iconType: 'food' | 'landmark' | 'dining' | 'beach' | 'night' | 'transport';
   details?: string;
   note?: string;
@@ -38,6 +62,7 @@ export type TimelineActivity = {
   voteStats?: string;
   driverInfo?: string;
   isCompleted?: boolean;
+  coordinates?: { lat: number; lng: number };
 };
 
 export type NotificationItem = {
@@ -92,6 +117,9 @@ export type ExpenseItem = {
   paidByAvatar: string;
   splitWithCount: number;
   date: string;
+  excludedMembers?: string[];
+  isSettled?: boolean;
+  notes?: string;
 };
 
 export type Member = {
@@ -106,11 +134,11 @@ export type Member = {
   owesAmount: number;
 };
 
-export type UtilitySetting = {
-  currencyConverter: boolean;
-  weatherRadar: boolean;
-  packingList: boolean;
-  sosDirectory: boolean;
-  quickSplit: boolean;
-  ambientSound: boolean;
+export type UserBankQr = {
+  bankId: string;
+  bankName: string;
+  accountNumber: string;
+  accountName: string;
+  customQrUrl?: string;
+  transferSyntax?: string;
 };

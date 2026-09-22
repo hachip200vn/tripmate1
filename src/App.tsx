@@ -8,31 +8,48 @@ import { VotingView } from './components/VotingView';
 import { BudgetView } from './components/BudgetView';
 import { ProfileView } from './components/ProfileView';
 
-import { UtilityDashboardModal } from './components/UtilityDashboardModal';
 import { AiPlannerModal } from './components/AiPlannerModal';
 import { NotificationsModal } from './components/NotificationsModal';
 import { PhoneOtpModal } from './components/PhoneOtpModal';
 import { PasswordModal } from './components/PasswordModal';
-import { ReviewModal } from './components/ReviewModal';
 import { AuthModal } from './components/AuthModal';
 import { SettleQrModal } from './components/SettleQrModal';
 import { AddExpenseModal } from './components/AddExpenseModal';
+import { CreatePollModal } from './components/CreatePollModal';
+import { InviteMembersModal } from './components/InviteMembersModal';
+import { UpdateUserQrModal } from './components/UpdateUserQrModal';
+import { TripManagerModal } from './components/TripManagerModal';
+import { JoinTripModal } from './components/JoinTripModal';
+import { TripsListView } from './components/TripsListView';
 
 import {
   initialMembers,
-  initialDays,
-  initialTimelineActivities,
   initialNotifications,
-  initialPolls,
-  initialExpenses,
   exploreSpots,
+  generatePrototypeTripPlan,
 } from './data/tripData';
+import {
+  initialTrips,
+  createNewTripFromPlan,
+  generateJoinedTripFromCode,
+} from './data/defaultTrips';
 import {
   getDestinationPolls,
   getDestinationExpenses,
   calculateMemberBalances,
 } from './data/destinationPollsAndBudgetData';
-import { NavTab, TimelineActivity, TripDay, TripPlanData, VotePoll, ExpenseItem, NotificationItem } from './types';
+import {
+  NavTab,
+  TimelineActivity,
+  TripDay,
+  TripPlanData,
+  VotePoll,
+  ExpenseItem,
+  NotificationItem,
+  Member,
+  UserBankQr,
+  Trip,
+} from './types';
 import { CheckCircle2 } from 'lucide-react';
 
 export default function App() {
@@ -47,30 +64,107 @@ export default function App() {
   const [userEmail, setUserEmail] = useState('nguyenviethung.co@gmail.com');
   const [userPhone, setUserPhone] = useState('0987 654 321');
 
-  // Trip and Views state - Initially empty itinerary as requested by user
-  const [tripPlan, setTripPlan] = useState<TripPlanData | null>(null);
-  const [tripDays, setTripDays] = useState<TripDay[]>([]);
-  const [activities, setActivities] = useState<TimelineActivity[]>([]);
+  // Multi-Trip State Management (Persisted in localStorage)
+  const [trips, setTrips] = useState<Trip[]>(() => {
+    const saved = localStorage.getItem('tripmate_user_trips');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      } catch (e) {
+        console.error('Failed to parse saved trips', e);
+      }
+    }
+    return initialTrips;
+  });
+
+  const [currentTripId, setCurrentTripId] = useState<string>(() => {
+    const savedId = localStorage.getItem('tripmate_current_trip_id');
+    if (savedId) return savedId;
+    return initialTrips[0]?.id || '';
+  });
+
+  // Selected Day within active trip
   const [selectedDayNumber, setSelectedDayNumber] = useState<number>(1);
 
-  // Polls & Expenses - initially empty when no trip plan is created
-  const [polls, setPolls] = useState<VotePoll[]>([]);
-  const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
-  const [members, setMembers] = useState(initialMembers);
+  // Active trip reference
+  const activeTrip: Trip | null =
+    trips.find((t) => t.id === currentTripId) || trips[0] || null;
+
+  // Active Trip derived properties
+  const activeTripDays: TripDay[] = activeTrip?.days || [];
+  const activeActivities: TimelineActivity[] = activeTrip?.activities || [];
+  const activePolls: VotePoll[] = activeTrip?.polls || [];
+  const activeExpenses: ExpenseItem[] = activeTrip?.expenses || [];
+  const activeMembers: Member[] = activeTrip?.members || initialMembers;
+
+  // Save trips and currentTripId to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('tripmate_user_trips', JSON.stringify(trips));
+    } catch (e) {
+      console.error('Error saving trips', e);
+    }
+  }, [trips]);
+
+  useEffect(() => {
+    if (currentTripId) {
+      localStorage.setItem('tripmate_current_trip_id', currentTripId);
+    }
+  }, [currentTripId]);
+
+  // Adjust selected day if out of range for the switched trip
+  useEffect(() => {
+    if (activeTripDays.length > 0 && selectedDayNumber > activeTripDays.length) {
+      setSelectedDayNumber(1);
+    }
+  }, [currentTripId, activeTripDays.length, selectedDayNumber]);
+
+  // Notifications
   const [notifications, setNotifications] = useState<NotificationItem[]>(initialNotifications);
 
   // Modals state
-  const [showUtilitiesModal, setShowUtilitiesModal] = useState(false);
   const [showAiPlannerModal, setShowAiPlannerModal] = useState(false);
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
   const [showPhoneModal, setShowPhoneModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [showReviewModal, setShowReviewModal] = useState(false);
-  const [reviewSpotName, setReviewSpotName] = useState('Cầu Rồng Đà Nẵng');
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [showSettleQrModal, setShowSettleQrModal] = useState(false);
-  const [settlePayer, setSettlePayer] = useState({ name: 'Khánh Huy', amount: 90000 });
+  const [settlePayer, setSettlePayer] = useState<{
+    name: string;
+    amount: number;
+    mode?: 'pay' | 'receive';
+  }>({ name: 'Khánh Huy', amount: 90000, mode: 'pay' });
   const [showAddExpenseModal, setShowAddExpenseModal] = useState(false);
+  const [showCreatePollModal, setShowCreatePollModal] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showUpdateQrModal, setShowUpdateQrModal] = useState(false);
+  const [showTripManagerModal, setShowTripManagerModal] = useState(false);
+  const [showJoinTripModal, setShowJoinTripModal] = useState(false);
+
+  // Selected trip for Invite Modal (defaults to activeTrip)
+  const [tripForInvite, setTripForInvite] = useState<Trip | null>(null);
+
+  // User Bank QR state (Persisted in localStorage)
+  const [userBankQr, setUserBankQr] = useState<UserBankQr>(() => {
+    const saved = localStorage.getItem('tripmate_user_bank_qr');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error('Error parsing saved bank qr', e);
+      }
+    }
+    return {
+      bankId: 'MB',
+      bankName: 'MB Bank (Quân Đội)',
+      accountNumber: '0987 654 321',
+      accountName: 'NGUYEN VIET HUNG',
+      transferSyntax: 'TRIPMATE CHIA TIEN',
+    };
+  });
 
   // Toast feedback
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -79,23 +173,8 @@ export default function App() {
     setToastMessage(msg);
     setTimeout(() => {
       setToastMessage(null);
-    }, 3000);
+    }, 3200);
   };
-
-  // Synchronize Polls and Budget when trip destination changes
-  useEffect(() => {
-    if (!tripPlan || !tripPlan.destination) {
-      setPolls([]);
-      setExpenses([]);
-      setMembers(initialMembers.map((m) => ({ ...m, paidAmount: 0, owesAmount: 0 })));
-    } else {
-      const destPolls = getDestinationPolls(tripPlan.destination);
-      const destExpenses = getDestinationExpenses(tripPlan.destination);
-      setPolls(destPolls);
-      setExpenses(destExpenses);
-      setMembers(calculateMemberBalances(destExpenses, initialMembers));
-    }
-  }, [tripPlan?.destination]);
 
   // Dark Mode effect
   useEffect(() => {
@@ -118,7 +197,65 @@ export default function App() {
     });
   };
 
-  // Add Spot To Itinerary from Explore View
+  // Switch Active Trip
+  const handleSelectTrip = (tripId: string) => {
+    setCurrentTripId(tripId);
+    setSelectedDayNumber(1);
+    const target = trips.find((t) => t.id === tripId);
+    if (target) {
+      showToast(`Đã chuyển sang chuyến: "${target.title}" ✈️`);
+    }
+  };
+
+  // Delete / Leave a Trip
+  const handleDeleteTrip = (tripId: string) => {
+    const targetTrip = trips.find((t) => t.id === tripId);
+    const remaining = trips.filter((t) => t.id !== tripId);
+    setTrips(remaining);
+
+    if (currentTripId === tripId) {
+      if (remaining.length > 0) {
+        setCurrentTripId(remaining[0].id);
+        setSelectedDayNumber(1);
+      } else {
+        setCurrentTripId('');
+      }
+    }
+
+    showToast(`Đã xóa chuyến đi "${targetTrip?.title || ''}"`);
+  };
+
+  // Apply AI Generated Trip Plan -> Adds as a new Trip
+  const handleApplyAiGeneratedPlan = (plan: TripPlanData) => {
+    const newTrip = createNewTripFromPlan(plan, userName);
+    setTrips((prev) => [newTrip, ...prev]);
+    setCurrentTripId(newTrip.id);
+    setSelectedDayNumber(1);
+    setCurrentTab('lich-trinh');
+    showToast(`Đã tạo chuyến đi mới: "${newTrip.title}"! 🎉`);
+  };
+
+  // Join Trip by Code
+  const handleJoinTripByCode = (code: string) => {
+    const upper = code.trim().toUpperCase();
+    const existing = trips.find((t) => t.inviteCode.toUpperCase() === upper);
+    if (existing) {
+      setCurrentTripId(existing.id);
+      setSelectedDayNumber(1);
+      setCurrentTab('lich-trinh');
+      showToast(`Bạn đã tham gia chuyến: "${existing.title}" rồi!`);
+      return;
+    }
+
+    const joinedTrip = generateJoinedTripFromCode(upper, userName);
+    setTrips((prev) => [joinedTrip, ...prev]);
+    setCurrentTripId(joinedTrip.id);
+    setSelectedDayNumber(1);
+    setCurrentTab('lich-trinh');
+    showToast(`Gia nhập thành công chuyến đi "${joinedTrip.title}"! 🎒✨`);
+  };
+
+  // Add Spot To Current Trip Itinerary from Explore View
   const handleAddSpotToItinerary = (spot: {
     id: string;
     name: string;
@@ -127,22 +264,23 @@ export default function App() {
     priceText: string;
     tip: string;
   }) => {
-    // If no days yet, initialize Day 1
-    if (tripDays.length === 0) {
-      const defaultDay: TripDay = {
-        dayNumber: 1,
-        date: 'Hôm nay',
-        displayDate: 'Ngày 1',
-        title: 'Khởi hành & Khám phá',
-        activitiesCount: 1,
-      };
-      setTripDays([defaultDay]);
-      setSelectedDayNumber(1);
+    if (!activeTrip) {
+      // If no active trip, create a fresh one first
+      const defaultPlan = generatePrototypeTripPlan({
+        destination: spot.address.split(',').pop()?.trim() || 'Hà Nội',
+      });
+      const newTrip = createNewTripFromPlan(defaultPlan, userName);
+      setTrips([newTrip]);
+      setCurrentTripId(newTrip.id);
+      showToast(`Đã tạo chuyến đi mới và thêm "${spot.name}"!`);
+      return;
     }
+
+    const targetDayNumber = activeTripDays.length === 0 ? 1 : selectedDayNumber;
 
     const newAct: TimelineActivity = {
       id: `act-${Date.now()}`,
-      dayNumber: tripDays.length === 0 ? 1 : selectedDayNumber,
+      dayNumber: targetDayNumber,
       time: '16:00',
       category: spot.category,
       title: spot.name,
@@ -153,79 +291,143 @@ export default function App() {
       iconType: spot.category.includes('Ẩm thực') ? 'food' : 'landmark',
       details: spot.tip,
     };
-    setActivities((prev) => [...prev, newAct]);
-    showToast(`Đã thêm "${spot.name}" vào lịch trình Ngày ${tripDays.length === 0 ? 1 : selectedDayNumber}!`);
+
+    setTrips((prev) =>
+      prev.map((t) =>
+        t.id === activeTrip.id
+          ? {
+              ...t,
+              activities: [...t.activities, newAct],
+            }
+          : t
+      )
+    );
+
+    showToast(`Đã thêm "${spot.name}" vào Ngày ${targetDayNumber}!`);
+  };
+
+  // Create itinerary directly from Explore Destination card
+  const handleCreateItineraryForDestination = (destinationName: string) => {
+    const plan = generatePrototypeTripPlan({ destination: destinationName });
+    const newTrip = createNewTripFromPlan(plan, userName);
+    setTrips((prev) => [newTrip, ...prev]);
+    setCurrentTripId(newTrip.id);
+    setSelectedDayNumber(1);
+    setCurrentTab('lich-trinh');
+    showToast(`Đã tạo chuyến đi khám phá ${destinationName}! ✨`);
   };
 
   // Vote on option in Poll
   const handleVoteOption = (pollId: string, optionId: string) => {
-    setPolls((prev) =>
-      prev.map((poll) => {
-        if (poll.id !== pollId) return poll;
-        return {
-          ...poll,
-          options: poll.options.map((opt) => {
-            if (opt.id === optionId) {
-              const nextVotes = opt.votedByMe ? opt.votes - 1 : opt.votes + 1;
-              return {
-                ...opt,
-                votes: Math.max(0, nextVotes),
-                votedByMe: !opt.votedByMe,
-                voterAvatars: opt.votedByMe
-                  ? opt.voterAvatars.filter((a) => a !== 'VH')
-                  : [...opt.voterAvatars, 'VH'],
-              };
-            }
-            return opt;
-          }),
-        };
+    if (!activeTrip) return;
+
+    setTrips((prev) =>
+      prev.map((t) => {
+        if (t.id !== activeTrip.id) return t;
+        const updatedPolls = t.polls.map((poll) => {
+          if (poll.id !== pollId) return poll;
+          return {
+            ...poll,
+            options: poll.options.map((opt) => {
+              if (opt.id === optionId) {
+                const nextVotes = opt.votedByMe ? opt.votes - 1 : opt.votes + 1;
+                return {
+                  ...opt,
+                  votes: Math.max(0, nextVotes),
+                  votedByMe: !opt.votedByMe,
+                  voterAvatars: opt.votedByMe
+                    ? opt.voterAvatars.filter((a) => a !== 'VH')
+                    : [...opt.voterAvatars, 'VH'],
+                };
+              }
+              return opt;
+            }),
+          };
+        });
+        return { ...t, polls: updatedPolls };
       })
     );
+
     showToast('Đã ghi nhận phiếu bình chọn của bạn! ✨');
   };
 
-  // Create Poll
+  // Create Poll trigger
   const handleCreatePoll = () => {
-    const dest = tripPlan?.destination || 'chuyến đi';
-    const newPoll: VotePoll = {
-      id: `poll-${Date.now()}`,
-      title: `Chọn điểm tụ tập & thưởng thức ẩm thực tiếp theo tại ${dest}`,
-      creator: 'Nguyễn Việt Hùng',
-      deadline: '20:00 tối nay',
-      category: 'Kế hoạch phát sinh',
-      status: 'active',
-      options: [
-        {
-          id: `opt-${Date.now()}-1`,
-          title: `Nhà hàng & Quán đặc sản nổi bật trung tâm ${dest}`,
-          location: `Trung tâm ${dest}`,
-          priceText: '~120.000đ/người',
-          votes: 1,
-          votedByMe: true,
-          voterAvatars: ['VH'],
-        },
-        {
-          id: `opt-${Date.now()}-2`,
-          title: `Trải nghiệm dạo đêm & Cà phê ngắm phố ${dest}`,
-          location: `Khu phố trung tâm ${dest}`,
-          priceText: 'Tự túc',
-          votes: 0,
-          votedByMe: false,
-          voterAvatars: [],
-        },
-      ],
-    };
-    setPolls((prev) => [newPoll, ...prev]);
-    showToast(`Đã tạo cuộc bình chọn mới cho ${dest}!`);
+    setShowCreatePollModal(true);
   };
 
-  // Add Expense
+  const handleSaveNewPoll = (newPoll: VotePoll) => {
+    if (!activeTrip) return;
+
+    setTrips((prev) =>
+      prev.map((t) =>
+        t.id === activeTrip.id
+          ? {
+              ...t,
+              polls: [newPoll, ...t.polls],
+            }
+          : t
+      )
+    );
+
+    showToast(`Đã tạo cuộc biểu quyết: "${newPoll.title}"! 🗳️`);
+  };
+
+  // Direct add member from invite modal
+  const handleAddMemberDirectly = (name: string, phone: string) => {
+    if (!activeTrip) return;
+
+    const newMember: Member = {
+      id: `m-${Date.now()}`,
+      name,
+      role: 'Thành viên',
+      avatar:
+        'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
+      initials:
+        name
+          .split(' ')
+          .filter(Boolean)
+          .map((w) => w[0])
+          .join('')
+          .slice(-2)
+          .toUpperCase() || 'TV',
+      phone: phone || undefined,
+      paidAmount: 0,
+      owesAmount: 0,
+    };
+
+    setTrips((prev) =>
+      prev.map((t) =>
+        t.id === activeTrip.id
+          ? {
+              ...t,
+              members: [...t.members, newMember],
+            }
+          : t
+      )
+    );
+
+    showToast(`Đã thêm thành viên "${name}" vào chuyến đi! 🎒`);
+  };
+
+  // Save personal QR Data
+  const handleSaveQrData = (newData: UserBankQr) => {
+    setUserBankQr(newData);
+    localStorage.setItem('tripmate_user_bank_qr', JSON.stringify(newData));
+    showToast('Đã cập nhật mã QR nhận tiền cá nhân của bạn! 💳');
+  };
+
+  // Add Expense with excluded members & notes support
   const handleAddExpense = (expense: {
     title: string;
     amount: number;
     paidByName: string;
     splitWithCount: number;
+    excludedMembers?: string[];
+    notes?: string;
   }) => {
+    if (!activeTrip) return;
+
     const newExp: ExpenseItem = {
       id: `exp-${Date.now()}`,
       title: expense.title,
@@ -235,13 +437,108 @@ export default function App() {
       paidByName: expense.paidByName,
       paidByAvatar: expense.paidByName.slice(0, 2).toUpperCase(),
       splitWithCount: expense.splitWithCount,
+      excludedMembers: expense.excludedMembers,
+      notes: expense.notes,
+      isSettled: false,
       date: 'Hôm nay',
     };
-    const updatedExpenses = [newExp, ...expenses];
-    setExpenses(updatedExpenses);
-    setMembers(calculateMemberBalances(updatedExpenses, initialMembers));
+
+    setTrips((prev) =>
+      prev.map((t) => {
+        if (t.id !== activeTrip.id) return t;
+        const updatedExpenses = [newExp, ...t.expenses];
+        const updatedMembers = calculateMemberBalances(updatedExpenses, t.members);
+        return {
+          ...t,
+          expenses: updatedExpenses,
+          members: updatedMembers,
+        };
+      })
+    );
 
     showToast(`Đã thêm khoản chi "${expense.title}"!`);
+  };
+
+  // Update existing expense
+  const handleUpdateExpense = (updatedExpense: ExpenseItem) => {
+    if (!activeTrip) return;
+
+    setTrips((prev) =>
+      prev.map((t) => {
+        if (t.id !== activeTrip.id) return t;
+        const updatedExpenses = t.expenses.map((exp) =>
+          exp.id === updatedExpense.id ? updatedExpense : exp
+        );
+        const updatedMembers = calculateMemberBalances(updatedExpenses, t.members);
+        return {
+          ...t,
+          expenses: updatedExpenses,
+          members: updatedMembers,
+        };
+      })
+    );
+
+    showToast(`Đã lưu thay đổi: ${updatedExpense.title}`);
+  };
+
+  // Delete expense
+  const handleDeleteExpense = (expenseId: string) => {
+    if (!activeTrip) return;
+
+    setTrips((prev) =>
+      prev.map((t) => {
+        if (t.id !== activeTrip.id) return t;
+        const updatedExpenses = t.expenses.filter((exp) => exp.id !== expenseId);
+        const updatedMembers = calculateMemberBalances(updatedExpenses, t.members);
+        return {
+          ...t,
+          expenses: updatedExpenses,
+          members: updatedMembers,
+        };
+      })
+    );
+
+    showToast('Đã xóa khoản chi khỏi danh sách');
+  };
+
+  // Update activity status in timeline
+  const handleUpdateActivityStatus = (
+    activityId: string,
+    newStatusType: TimelineActivity['statusType'],
+    newStatusText: string
+  ) => {
+    if (!activeTrip) return;
+
+    setTrips((prev) =>
+      prev.map((t) => {
+        if (t.id !== activeTrip.id) return t;
+        const updatedActs = t.activities.map((act) =>
+          act.id === activityId
+            ? { ...act, statusType: newStatusType, statusText: newStatusText }
+            : act
+        );
+        return { ...t, activities: updatedActs };
+      })
+    );
+
+    showToast(`Đã cập nhật trạng thái hoạt động: ${newStatusText}`);
+  };
+
+  // Delete activity from timeline
+  const handleDeleteActivity = (activityId: string) => {
+    if (!activeTrip) return;
+
+    setTrips((prev) =>
+      prev.map((t) => {
+        if (t.id !== activeTrip.id) return t;
+        return {
+          ...t,
+          activities: t.activities.filter((act) => act.id !== activityId),
+        };
+      })
+    );
+
+    showToast('Đã xóa hoạt động khỏi lịch trình');
   };
 
   // Optimize route simulation
@@ -274,14 +571,41 @@ export default function App() {
           onToggleDarkMode={toggleDarkMode}
           unreadCount={unreadCount}
           onOpenNotifications={() => setShowNotificationsModal(true)}
-          onOpenUtilities={() => setShowUtilitiesModal(true)}
           onOpenProfileOrAuth={() => setCurrentTab('tai-khoan')}
           isLoggedIn={true}
+          activeTripTitle={activeTrip?.title}
         />
 
         {/* Main Content with Framer-motion Transitions */}
         <main className="flex-1 w-full px-4 pt-4 pb-4 overflow-x-hidden">
           <AnimatePresence mode="wait">
+            {currentTab === 'chuyen-di' && (
+              <motion.div
+                key="chuyen-di"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 10 }}
+                transition={{ duration: 0.2, ease: 'easeInOut' }}
+              >
+                <TripsListView
+                  trips={trips}
+                  currentTripId={currentTripId}
+                  onBack={() => setCurrentTab('lich-trinh')}
+                  onSelectTrip={(id) => {
+                    handleSelectTrip(id);
+                    setCurrentTab('lich-trinh');
+                  }}
+                  onOpenCreateWithAi={() => setShowAiPlannerModal(true)}
+                  onOpenJoinTrip={() => setShowJoinTripModal(true)}
+                  onOpenInviteForTrip={(t) => {
+                    setTripForInvite(t);
+                    setShowInviteModal(true);
+                  }}
+                  onDeleteTrip={handleDeleteTrip}
+                />
+              </motion.div>
+            )}
+
             {currentTab === 'lich-trinh' && (
               <motion.div
                 key="lich-trinh"
@@ -291,20 +615,26 @@ export default function App() {
                 transition={{ duration: 0.2, ease: 'easeInOut' }}
               >
                 <ItineraryView
-                  days={tripDays}
+                  days={activeTripDays}
                   selectedDay={selectedDayNumber}
                   onSelectDay={setSelectedDayNumber}
-                  activities={activities}
-                  members={members}
-                  tripTitle={tripPlan?.tripTitle}
-                  tripDatesSummary={tripPlan?.datesSummary}
-                  tripCoverImage={tripPlan?.coverImage}
-                  aiSummary={tripPlan?.aiSummary}
+                  activities={activeActivities}
+                  members={activeMembers}
+                  tripTitle={activeTrip?.title}
+                  tripDatesSummary={activeTrip?.datesSummary}
+                  tripCoverImage={activeTrip?.coverImage}
+                  aiSummary={activeTrip?.aiSummary}
+                  trips={trips}
+                  currentTripId={currentTripId}
+                  onSelectTrip={handleSelectTrip}
+                  onOpenTripManager={() => setCurrentTab('chuyen-di')}
+                  onOpenJoinTrip={() => setShowJoinTripModal(true)}
                   onOpenAiPlanner={() => setShowAiPlannerModal(true)}
                   onAddActivity={handleAddActivity}
-                  onOpenInviteModal={() =>
-                    showToast('Mã mời nhóm: TRIPMATE-DN2025 (Đã sao chép)')
-                  }
+                  onOpenInviteModal={() => {
+                    setTripForInvite(activeTrip);
+                    setShowInviteModal(true);
+                  }}
                   onVoteAgain={(actTitle) => {
                     setCurrentTab('binh-chon');
                     showToast(`Chuyển đến bình chọn cho: ${actTitle}`);
@@ -313,12 +643,12 @@ export default function App() {
                     showToast('Bản đồ toàn màn hình cùng định vị GPS');
                   }}
                   onOptimizeRoute={handleOptimizeRoute}
+                  onUpdateActivityStatus={handleUpdateActivityStatus}
+                  onDeleteActivity={handleDeleteActivity}
                   onResetTrip={() => {
-                    setTripPlan(null);
-                    setTripDays([]);
-                    setActivities([]);
-                    setSelectedDayNumber(1);
-                    showToast('Đã làm mới lại lịch trình!');
+                    if (activeTrip) {
+                      handleDeleteTrip(activeTrip.id);
+                    }
                   }}
                 />
               </motion.div>
@@ -333,17 +663,10 @@ export default function App() {
                 transition={{ duration: 0.2, ease: 'easeInOut' }}
               >
                 <ExploreView
-                  currentDestination={tripPlan?.destination}
-                  onOpenReviewModal={(spotName) => {
-                    setReviewSpotName(spotName);
-                    setShowReviewModal(true);
-                  }}
+                  currentDestination={activeTrip?.destination}
                   onAddSpotToItinerary={handleAddSpotToItinerary}
                   onSwitchToItinerary={() => setCurrentTab('lich-trinh')}
-                  onOpenAiPlanner={() => {
-                    setCurrentTab('lich-trinh');
-                    setShowAiPlannerModal(true);
-                  }}
+                  onCreateItineraryForDestination={handleCreateItineraryForDestination}
                 />
               </motion.div>
             )}
@@ -357,8 +680,8 @@ export default function App() {
                 transition={{ duration: 0.2, ease: 'easeInOut' }}
               >
                 <VotingView
-                  polls={polls}
-                  currentDestination={tripPlan?.destination}
+                  polls={activePolls}
+                  currentDestination={activeTrip?.destination}
                   onVoteOption={handleVoteOption}
                   onCreatePoll={handleCreatePoll}
                   onSwitchToItinerary={() => setCurrentTab('lich-trinh')}
@@ -379,14 +702,18 @@ export default function App() {
                 transition={{ duration: 0.2, ease: 'easeInOut' }}
               >
                 <BudgetView
-                  expenses={expenses}
-                  members={members}
-                  currentDestination={tripPlan?.destination}
+                  expenses={activeExpenses}
+                  members={activeMembers}
+                  currentDestination={activeTrip?.destination}
+                  userBankQr={userBankQr}
+                  onOpenUpdateQr={() => setShowUpdateQrModal(true)}
                   onAddExpense={() => setShowAddExpenseModal(true)}
-                  onOpenSettleQr={(payer, amount) => {
-                    setSettlePayer({ name: payer, amount });
+                  onOpenSettleQr={(payer, amount, mode = 'pay') => {
+                    setSettlePayer({ name: payer, amount, mode });
                     setShowSettleQrModal(true);
                   }}
+                  onUpdateExpense={handleUpdateExpense}
+                  onDeleteExpense={handleDeleteExpense}
                   onSwitchToItinerary={() => setCurrentTab('lich-trinh')}
                   onOpenAiPlanner={() => {
                     setCurrentTab('lich-trinh');
@@ -409,11 +736,12 @@ export default function App() {
                   userEmail={userEmail}
                   userPhone={userPhone}
                   darkMode={darkMode}
+                  tripsCount={trips.length}
                   onToggleDarkMode={toggleDarkMode}
                   onOpenPhoneModal={() => setShowPhoneModal(true)}
                   onOpenPasswordModal={() => setShowPasswordModal(true)}
-                  onOpenUtilitiesModal={() => setShowUtilitiesModal(true)}
                   onOpenNotifications={() => setShowNotificationsModal(true)}
+                  onOpenTripManager={() => setCurrentTab('chuyen-di')}
                   onLogoutOrSwitchAccount={() => setShowAuthModal(true)}
                 />
               </motion.div>
@@ -443,25 +771,10 @@ export default function App() {
         </AnimatePresence>
 
         {/* All Modals */}
-        <UtilityDashboardModal
-          isOpen={showUtilitiesModal}
-          onClose={() => setShowUtilitiesModal(false)}
-          darkMode={darkMode}
-          onToggleDarkMode={toggleDarkMode}
-          currentDestination={tripPlan?.destination}
-        />
-
         <AiPlannerModal
           isOpen={showAiPlannerModal}
           onClose={() => setShowAiPlannerModal(false)}
-          onApplyGeneratedPlan={(plan) => {
-            setTripPlan(plan);
-            setTripDays(plan.days);
-            setActivities(plan.activities);
-            setSelectedDayNumber(1);
-            setCurrentTab('lich-trinh');
-            showToast(`AI đã lập lịch trình hoàn tất: ${plan.tripTitle}! 🎉`);
-          }}
+          onApplyGeneratedPlan={handleApplyAiGeneratedPlan}
         />
 
         <NotificationsModal
@@ -491,15 +804,6 @@ export default function App() {
           }}
         />
 
-        <ReviewModal
-          isOpen={showReviewModal}
-          onClose={() => setShowReviewModal(false)}
-          spotName={reviewSpotName}
-          onSubmitSuccess={() => {
-            showToast('Đã đăng cảm nhận & hình ảnh thực tế thành công!');
-          }}
-        />
-
         <AuthModal
           isOpen={showAuthModal}
           onClose={() => setShowAuthModal(false)}
@@ -513,16 +817,75 @@ export default function App() {
           onClose={() => setShowSettleQrModal(false)}
           payerName={settlePayer.name}
           amount={settlePayer.amount}
+          mode={settlePayer.mode}
+          userBankQr={userBankQr}
+          onOpenUpdateQr={() => setShowUpdateQrModal(true)}
           onSettledSuccess={() => {
-            showToast('Đã xác nhận thanh toán chuyển khoản!');
+            showToast(
+              settlePayer.mode === 'receive'
+                ? 'Đã xác nhận nhận tiền thành công!'
+                : 'Đã xác nhận thanh toán chuyển khoản!'
+            );
           }}
         />
 
         <AddExpenseModal
           isOpen={showAddExpenseModal}
           onClose={() => setShowAddExpenseModal(false)}
-          members={members}
+          members={activeMembers}
           onAddExpense={handleAddExpense}
+        />
+
+        {/* Create Poll Modal */}
+        <CreatePollModal
+          isOpen={showCreatePollModal}
+          onClose={() => setShowCreatePollModal(false)}
+          destination={activeTrip?.destination}
+          creatorName={userName}
+          onSavePoll={handleSaveNewPoll}
+        />
+
+        {/* Invite Members Modal */}
+        <InviteMembersModal
+          isOpen={showInviteModal}
+          onClose={() => setShowInviteModal(false)}
+          tripTitle={tripForInvite?.title || activeTrip?.title}
+          destination={tripForInvite?.destination || activeTrip?.destination}
+          datesSummary={tripForInvite?.datesSummary || activeTrip?.datesSummary}
+          inviteCode={tripForInvite?.inviteCode || activeTrip?.inviteCode}
+          members={tripForInvite?.members || activeMembers}
+          onAddMemberDirectly={handleAddMemberDirectly}
+        />
+
+        {/* Update User QR Modal */}
+        <UpdateUserQrModal
+          isOpen={showUpdateQrModal}
+          onClose={() => setShowUpdateQrModal(false)}
+          currentQrData={userBankQr}
+          onSaveQrData={handleSaveQrData}
+        />
+
+        {/* Trip Manager Modal */}
+        <TripManagerModal
+          isOpen={showTripManagerModal}
+          onClose={() => setShowTripManagerModal(false)}
+          trips={trips}
+          currentTripId={currentTripId}
+          onSelectTrip={handleSelectTrip}
+          onOpenCreateWithAi={() => setShowAiPlannerModal(true)}
+          onOpenJoinTrip={() => setShowJoinTripModal(true)}
+          onOpenInviteForTrip={(t) => {
+            setTripForInvite(t);
+            setShowInviteModal(true);
+          }}
+          onDeleteTrip={handleDeleteTrip}
+        />
+
+        {/* Join Trip Modal */}
+        <JoinTripModal
+          isOpen={showJoinTripModal}
+          onClose={() => setShowJoinTripModal(false)}
+          onJoinTrip={handleJoinTripByCode}
         />
       </div>
     </div>

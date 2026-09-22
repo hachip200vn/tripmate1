@@ -1,11 +1,14 @@
 import { VotePoll, ExpenseItem, Member } from '../types';
 import { removeVietnameseTones, VIETNAM_DESTINATIONS } from './vietnamDestinations';
 
-// Helper to recalculate member paid amounts based on expenses
+// Helper to recalculate member paid amounts based on expenses, considering excluded members
 export function calculateMemberBalances(expenses: ExpenseItem[], baseMembers: Member[]): Member[] {
   const memberPaidMap: Record<string, number> = {};
+  const memberShouldPayMap: Record<string, number> = {};
+
   baseMembers.forEach((m) => {
     memberPaidMap[m.name] = 0;
+    memberShouldPayMap[m.name] = 0;
   });
 
   expenses.forEach((e) => {
@@ -14,14 +17,22 @@ export function calculateMemberBalances(expenses: ExpenseItem[], baseMembers: Me
     } else {
       memberPaidMap[e.paidByName] = e.amount;
     }
-  });
 
-  const totalSpent = expenses.reduce((sum, e) => sum + e.amount, 0);
-  const perPersonAvg = Math.round(totalSpent / (baseMembers.length || 1));
+    // Filter participants excluding exempted members
+    const excluded = e.excludedMembers || [];
+    const participants = baseMembers.filter((m) => !excluded.includes(m.name));
+    const effectiveCount = participants.length > 0 ? participants.length : Math.max(1, e.splitWithCount || baseMembers.length);
+    const perPersonShare = Math.round(e.amount / effectiveCount);
+
+    participants.forEach((p) => {
+      memberShouldPayMap[p.name] = (memberShouldPayMap[p.name] || 0) + perPersonShare;
+    });
+  });
 
   return baseMembers.map((m) => {
     const paid = memberPaidMap[m.name] || 0;
-    const diff = paid - perPersonAvg;
+    const shouldPay = memberShouldPayMap[m.name] || 0;
+    const diff = paid - shouldPay;
     return {
       ...m,
       paidAmount: paid,

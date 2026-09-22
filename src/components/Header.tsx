@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bell, Moon, Sun, SlidersHorizontal, Sparkles, LogIn } from 'lucide-react';
+import { Bell, Moon, Sun, Sparkles, LogIn } from 'lucide-react';
 import { NavTab } from '../types';
 
 interface HeaderProps {
@@ -8,9 +8,9 @@ interface HeaderProps {
   onToggleDarkMode: () => void;
   unreadCount: number;
   onOpenNotifications: () => void;
-  onOpenUtilities: () => void;
   onOpenProfileOrAuth: () => void;
   isLoggedIn: boolean;
+  activeTripTitle?: string;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -19,9 +19,9 @@ export const Header: React.FC<HeaderProps> = ({
   onToggleDarkMode,
   unreadCount,
   onOpenNotifications,
-  onOpenUtilities,
   onOpenProfileOrAuth,
   isLoggedIn,
+  activeTripTitle,
 }) => {
   const getTabTitle = () => {
     switch (currentTab) {
@@ -29,6 +29,8 @@ export const Header: React.FC<HeaderProps> = ({
         return 'Khám Phá';
       case 'lich-trinh':
         return 'Lịch Trình';
+      case 'chuyen-di':
+        return 'Các Chuyến Đi';
       case 'binh-chon':
         return 'Bình Chọn';
       case 'ngan-sach':
@@ -61,21 +63,16 @@ export const Header: React.FC<HeaderProps> = ({
                 {getTabTitle()}
               </span>
             </div>
+            {activeTripTitle && currentTab !== 'kham-pha' && currentTab !== 'tai-khoan' && currentTab !== 'chuyen-di' && (
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold truncate max-w-[170px] sm:max-w-[220px] leading-tight">
+                📍 {activeTripTitle}
+              </p>
+            )}
           </div>
         </div>
 
         {/* Action Controls */}
         <div className="flex items-center gap-1.5">
-          {/* Personalization / Utilities Dashboard Button */}
-          <button
-            onClick={onOpenUtilities}
-            title="Bảng tiện ích cá nhân hóa"
-            className="p-2 rounded-xl text-slate-600 hover:text-sky-600 hover:bg-sky-50 dark:text-slate-300 dark:hover:text-cyan-400 dark:hover:bg-slate-800 transition-colors relative flex items-center gap-1 text-xs font-semibold"
-          >
-            <SlidersHorizontal className="w-4 h-4 text-sky-600 dark:text-sky-400" />
-            <span className="hidden sm:inline">Tiện ích</span>
-          </button>
-
           {/* Dark Mode Toggle */}
           <button
             onClick={onToggleDarkMode}

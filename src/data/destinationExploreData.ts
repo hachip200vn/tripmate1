@@ -3,7 +3,7 @@ import { VIETNAM_DESTINATIONS, removeVietnameseTones } from './vietnamDestinatio
 export interface ExploreSpotItem {
   id: string;
   name: string;
-  category: 'Biểu tượng & Check-in' | 'Biển & Nghỉ dưỡng' | 'Di sản & Văn hóa' | 'Ẩm thực & Mua sắm' | 'Thiên nhiên & Trải nghiệm';
+  category: string;
   tag: string;
   rating: number;
   reviewsCount: number;
@@ -23,6 +23,10 @@ export interface ExploreArticle {
   excerpt: string;
   author: string;
   date: string;
+  destination?: string;
+  content?: string[];
+  likesCount?: number;
+  commentsCount?: number;
 }
 
 export interface DestinationExploreResult {
@@ -871,3 +875,55 @@ export function getDestinationExploreData(destinationQuery?: string): Destinatio
     }))
   };
 }
+
+/**
+ * Returns all top-rated curated articles across Vietnam for the Travel Blog Home
+ */
+export function getAllFeaturedArticles(): ExploreArticle[] {
+  const allSets = [
+    { dest: 'Hà Nội', articles: HANOI_DATA.articles },
+    { dest: 'Đà Nẵng — Hội An', articles: DANANG_DATA.articles },
+    { dest: 'Đà Lạt', articles: DALAT_DATA.articles },
+    { dest: 'Phú Quốc', articles: PHUQUOC_DATA.articles },
+    { dest: 'Sa Pa', articles: SAPA_DATA.articles },
+    { dest: 'Hà Giang', articles: HAGIANG_DATA.articles },
+  ];
+
+  const enriched: ExploreArticle[] = [];
+  allSets.forEach(({ dest, articles }) => {
+    articles.forEach((art, i) => {
+      enriched.push({
+        ...art,
+        destination: dest,
+        likesCount: 128 + i * 47,
+        commentsCount: 24 + i * 9,
+        content: [
+          `Du lịch khám phá ${dest} luôn mang lại những cung bậc cảm xúc khó quên cho mỗi lữ khách. Với vẻ đẹp đặc trưng, sự giao thoa hài hòa giữa cảnh sắc thiên nhiên và nếp sống bản địa giàu bản sắc, đây là điểm hẹn lý tưởng cho những chuyến đi tái tạo năng lượng.`,
+          `Theo kinh nghiệm của các tín đồ xê dịch, khoảng thời gian đẹp nhất để tận hưởng trọn vẹn cảnh sắc là lúc sáng sớm tinh mơ khi không khí trong lành, hoặc thời khắc hoàng hôn buông xuống nhuộm vàng cả không gian. Đừng quên chuẩn bị trang phục phù hợp với thời tiết địa phương và mang theo máy ảnh để bắt trọn những khung hình đắt giá.`,
+          `Về văn hóa ẩm thực, hãy ưu tiên ghé qua các khu chợ truyền thống và quán ăn lâu đời của người dân bản địa. Hương vị nguyên bản, mộc mạc cùng sự hiếu khách nồng hậu chắc chắn sẽ để lại dư vị ấm áp trong hành trình của bạn.`,
+          `Lưu ý hữu ích: Hãy đặt trước dịch vụ lưu trú và vé tham quan trong mùa cao điểm, đồng thời duy trì ý thức bảo vệ môi trường, không xả rác tại các danh lam thắng cảnh thiên nhiên.`
+        ]
+      });
+    });
+  });
+
+  return enriched;
+}
+
+/**
+ * Returns all top-rated spots across destinations for the Travel Blog Home
+ */
+export function getAllFeaturedSpots(): ExploreSpotItem[] {
+  const allDestSpots = [
+    ...HANOI_DATA.spots,
+    ...DANANG_DATA.spots,
+    ...DALAT_DATA.spots,
+    ...PHUQUOC_DATA.spots,
+    ...SAPA_DATA.spots,
+    ...HAGIANG_DATA.spots,
+  ];
+
+  // Return highest rated spots
+  return allDestSpots.sort((a, b) => b.rating - a.rating);
+}
+

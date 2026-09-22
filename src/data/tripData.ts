@@ -457,6 +457,140 @@ export interface GeneratePlanOptions {
   notes?: string;
 }
 
+function parseDateParts(dateStr: string): Date {
+  const parts = dateStr.split('-');
+  if (parts.length === 3) {
+    const y = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10) - 1;
+    const d = parseInt(parts[2], 10);
+    return new Date(y, m, d);
+  }
+  return new Date(dateStr);
+}
+
+function formatDateISO(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function formatDisplayDate(d: Date): string {
+  const day = String(d.getDate()).padStart(2, '0');
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  return `${day}/${m}`;
+}
+
+function formatFullDateVN(d: Date): string {
+  const day = String(d.getDate()).padStart(2, '0');
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const y = d.getFullYear();
+  return `${day}/${m}/${y}`;
+}
+
+export function synchronizeTripDates(
+  rawDays: TripDay[],
+  rawActivities: TimelineActivity[],
+  options: GeneratePlanOptions
+): { days: TripDay[]; activities: TimelineActivity[]; datesSummary: string; totalDays: number } {
+  const startStr = options.startDate || '2025-04-15';
+  const endStr = options.endDate || '2025-04-18';
+  let start = parseDateParts(startStr);
+  let end = parseDateParts(endStr);
+
+  if (start.getTime() > end.getTime()) {
+    end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 3);
+  }
+
+  const timeDiff = end.getTime() - start.getTime();
+  const dayCount = Math.max(1, Math.round(timeDiff / (1000 * 60 * 60 * 24)) + 1);
+  const nightCount = Math.max(0, dayCount - 1);
+  const durationLabel = dayCount === 1 ? '1 ngày (đi trong ngày)' : `${dayCount} ngày ${nightCount} đêm`;
+  const datesSummary = `${formatFullDateVN(start)} – ${formatFullDateVN(end)} (${durationLabel})`;
+
+  const days: TripDay[] = [];
+  const activities: TimelineActivity[] = [];
+
+  for (let i = 1; i <= dayCount; i++) {
+    const dayDate = new Date(start.getFullYear(), start.getMonth(), start.getDate() + (i - 1));
+    const dayDateISO = formatDateISO(dayDate);
+    const dayDisplay = formatDisplayDate(dayDate);
+
+    let title = `Khám phá & Trải nghiệm Ngày ${i}`;
+    if (i === 1) {
+      title = rawDays[0]?.title || 'Khởi hành & Đến nơi';
+    } else if (i === dayCount && dayCount > 1) {
+      title = rawDays[rawDays.length - 1]?.title || 'Mua sắm quà lưu niệm & Tạm biệt';
+    } else if (rawDays[i - 1]) {
+      title = rawDays[i - 1].title;
+    } else if (rawDays.length > 2) {
+      title = rawDays[Math.min(i - 1, rawDays.length - 2)]?.title || title;
+    }
+
+    days.push({
+      dayNumber: i,
+      date: dayDateISO,
+      displayDate: dayDisplay,
+      title,
+      activitiesCount: 0,
+    });
+  }
+
+  if (dayCount === rawDays.length) {
+    rawActivities.forEach((act) => activities.push({ ...act }));
+  } else if (dayCount < rawDays.length) {
+    rawActivities.forEach((act) => {
+      activities.push({
+        ...act,
+        dayNumber: Math.min(act.dayNumber, dayCount),
+      });
+    });
+  } else {
+    rawActivities.forEach((act) => activities.push({ ...act }));
+    for (let extraDay = rawDays.length + 1; extraDay <= dayCount; extraDay++) {
+      activities.push(
+        {
+          id: `extra-act-${extraDay}-1`,
+          dayNumber: extraDay,
+          time: '09:00',
+          category: 'Khám phá tự do',
+          title: `Trải nghiệm tự do & Thưởng thức đặc sản Ngày ${extraDay}`,
+          location: 'Khu trung tâm địa phương',
+          costText: '~150.000đ',
+          statusText: 'Đã duyệt',
+          statusType: 'approved',
+          iconType: 'landmark',
+          details: 'Dành thời gian dạo chơi các điểm đến lân cận, chụp ảnh kỷ niệm và mua sắm sản vật địa phương.'
+        },
+        {
+          id: `extra-act-${extraDay}-2`,
+          dayNumber: extraDay,
+          time: '18:30',
+          category: 'Ẩm thực & Thư giãn',
+          title: 'Bữa tối ấm cúng cùng đoàn & Cafe ngắm cảnh',
+          location: 'Phố ẩm thực trung tâm',
+          costText: '~200.000đ/người',
+          statusText: 'Đã duyệt',
+          statusType: 'approved',
+          iconType: 'food',
+          details: 'Tận hưởng ẩm thực đêm phong phú và thư giãn sau một ngày dài khám phá.'
+        }
+      );
+    }
+  }
+
+  days.forEach((d) => {
+    d.activitiesCount = activities.filter((a) => a.dayNumber === d.dayNumber).length;
+  });
+
+  return {
+    days,
+    activities,
+    datesSummary,
+    totalDays: dayCount,
+  };
+}
+
 export function generatePrototypeTripPlan(options: GeneratePlanOptions = {}): TripPlanData {
   const dest = options.destination?.trim() || 'Đà Nẵng — Hội An';
   const lower = dest.toLowerCase();
@@ -577,15 +711,144 @@ export function generatePrototypeTripPlan(options: GeneratePlanOptions = {}): Tr
       }
     ];
 
+    const synced = synchronizeTripDates(days, activities, options);
     return {
       tripTitle: 'Kỳ nghỉ Phú Quốc — Đảo Ngọc Thiên Đường 🏝️',
       destination: 'Phú Quốc, Kiên Giang',
-      datesSummary: options.startDate && options.endDate ? `${options.startDate} – ${options.endDate} (4 ngày 3 đêm)` : '10/05 – 13/05/2025 (4 ngày 3 đêm)',
-      totalDays: 4,
+      datesSummary: synced.datesSummary,
+      totalDays: synced.totalDays,
       coverImage: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=1200&auto=format&fit=crop&q=80',
-      days,
-      activities,
+      days: synced.days,
+      activities: synced.activities,
       aiSummary: 'Kế hoạch đã tối ưu hướng di chuyển từ Nam Đảo lên Bắc Đảo. Tránh các khung giờ nắng gắt và kết hợp lặn san hô cùng hoàng hôn đẹp nhất Việt Nam!'
+    };
+  }
+
+  // HUẾ (Cố đô di sản & Sông Hương)
+  if (lower.includes('huế') || lower.includes('hue') || lower.includes('thừa thiên')) {
+    const days: TripDay[] = [
+      { dayNumber: 1, date: options.startDate || '2025-06-10', displayDate: '10/06', title: 'Đến Cố Đô & Đại Nội Hoàng Cung', activitiesCount: 4 },
+      { dayNumber: 2, date: '2025-06-11', displayDate: '11/06', title: 'Chùa Thiên Mụ & Lăng Khải Định uy nghiêm', activitiesCount: 4 },
+      { dayNumber: 3, date: '2025-06-12', displayDate: '12/06', title: 'Du thuyền Sông Hương & Chợ Đông Ba', activitiesCount: 3 },
+      { dayNumber: 4, date: options.endDate || '2025-06-13', displayDate: '13/06', title: 'Thưởng thức Ẩm thực Cố Đô & Tạm biệt', activitiesCount: 2 }
+    ];
+    const activities: TimelineActivity[] = [
+      {
+        id: 'hue-101',
+        dayNumber: 1,
+        time: '10:30',
+        category: 'Di chuyển & Đến nơi',
+        title: 'Hạ cánh sân bay Phú Bài (HUI) & Nhận phòng',
+        location: 'Khách sạn Silk Path Grand Huế, Lê Lợi',
+        costText: 'Đã đặt phòng',
+        statusText: 'Đúng giờ',
+        statusType: 'booked',
+        iconType: 'transport',
+        details: 'Xe limousine đưa đoàn về khách sạn nhận phòng bên bờ sông Hương'
+      },
+      {
+        id: 'hue-102',
+        dayNumber: 1,
+        time: '12:00',
+        category: 'Ẩm thực trưa',
+        title: 'Bún Bò Huế Mụ Rơi trứ danh',
+        location: '40 Nguyễn Chí Diểu, Thuận Thành',
+        costText: '~55.000đ/tô',
+        statusText: 'Đã duyệt',
+        statusType: 'approved',
+        iconType: 'food',
+        details: 'Tô bún bò đậm đà ruốc thơm lừng, thịt bắp hoa giòn sần sật'
+      },
+      {
+        id: 'hue-103',
+        dayNumber: 1,
+        time: '14:30',
+        category: 'Di sản & Văn hóa',
+        title: 'Tham quan Đại Nội Huế & Cung Diên Thọ',
+        location: 'Đường 23/8, Thuận Hòa, TP. Huế',
+        costText: '200.000đ vé vào',
+        statusText: 'Đã đặt vé',
+        statusType: 'booked',
+        iconType: 'landmark',
+        details: 'Thuê áo Nhật Bình chụp ảnh tại Điện Thái Hòa và Cung Diên Thọ mới trùng tu'
+      },
+      {
+        id: 'hue-104',
+        dayNumber: 1,
+        time: '18:30',
+        category: 'Ẩm thực & Dạo đêm',
+        title: 'Chè Hẻm Hùng Vương & Cầu Tràng Tiền lên đèn',
+        location: 'Số 1 Kiệt 29 Hùng Vương, Phú Nhuận',
+        costText: '~35.000đ/ly',
+        statusText: '5/5 đồng ý',
+        statusType: 'voted',
+        iconType: 'night',
+        details: 'Thử món chè bột lọc bọc heo quay độc bản và ngắm 12 nhịp cầu Tràng Tiền đổi màu'
+      },
+      {
+        id: 'hue-201',
+        dayNumber: 2,
+        time: '08:30',
+        category: 'Di sản & Tâm linh',
+        title: 'Viếng Chùa Thiên Mụ bên bờ Sông Hương',
+        location: 'Đồi Hà Khê, Kim Long, TP. Huế',
+        costText: 'Miễn phí',
+        statusText: 'Đã duyệt',
+        statusType: 'approved',
+        iconType: 'landmark',
+        details: 'Đệ nhất cổ tự xứ Huế, chiêm ngưỡng tháp Phước Duyên 7 tầng soi bóng'
+      },
+      {
+        id: 'hue-202',
+        dayNumber: 2,
+        time: '11:00',
+        category: 'Di sản kiến trúc',
+        title: 'Khám phá Lăng Khải Định (Ứng Lăng)',
+        location: 'Xã Thủy Bằng, Hương Thủy, Thừa Thiên Huế',
+        costText: '150.000đ vé vào',
+        statusText: 'Xe đón',
+        statusType: 'transport',
+        iconType: 'landmark',
+        details: 'Đỉnh cao nghệ thuật ghép sành sứ và bức tranh Cửu Long Ẩn Vân trên trần cung Thiên Định'
+      },
+      {
+        id: 'hue-203',
+        dayNumber: 2,
+        time: '16:30',
+        category: 'Ngắm cảnh & Trải nghiệm',
+        title: 'Đón hoàng hôn tại Đồi Vọng Cảnh',
+        location: 'Đồi Vọng Cảnh, Thủy Biều, TP. Huế',
+        costText: 'Miễn phí',
+        statusText: '5/5 đồng ý',
+        statusType: 'voted',
+        iconType: 'landmark',
+        details: 'Góc ngắm khúc quanh sông Hương mềm mại như dải lụa giữa đồi thông xanh ngát'
+      },
+      {
+        id: 'hue-204',
+        dayNumber: 2,
+        time: '19:30',
+        category: 'Văn hóa ca Huế',
+        title: 'Thuyền rồng nghe Ca Huế trên Sông Hương & Thả hoa đăng',
+        location: 'Bến thuyền Tòa Khâm, Lê Lợi',
+        costText: '100.000đ/người',
+        statusText: 'Đã đặt',
+        statusType: 'booked',
+        iconType: 'night',
+        details: 'Lắng nghe làn điệu Nam ai, Nam bình sâu lắng và thả hoa đăng ước nguyện'
+      }
+    ];
+
+    const synced = synchronizeTripDates(days, activities, options);
+    return {
+      tripTitle: 'Hành Trình Cố Đô Huế — Dấu Ấn Hoàng Cung & Sông Hương 🏯🌸',
+      destination: 'Huế, Thừa Thiên Huế',
+      datesSummary: synced.datesSummary,
+      totalDays: synced.totalDays,
+      coverImage: 'https://images.unsplash.com/photo-1568084680786-a84f91d1153c?w=1200&auto=format&fit=crop&q=80',
+      days: synced.days,
+      activities: synced.activities,
+      aiSummary: 'Lịch trình kết hợp hài hòa giữa di sản cung đình triều Nguyễn, vẻ đẹp êm ả của sông Hương và nền ẩm thực tinh hoa đất Cố Đô!'
     };
   }
 
@@ -665,14 +928,15 @@ export function generatePrototypeTripPlan(options: GeneratePlanOptions = {}): Tr
       }
     ];
 
+    const synced = synchronizeTripDates(days, activities, options);
     return {
       tripTitle: 'Hành Trình Săn Mây & Chill Phố Núi Đà Lạt 🌲☕',
       destination: 'Đà Lạt, Lâm Đồng',
-      datesSummary: options.startDate && options.endDate ? `${options.startDate} – ${options.endDate} (4 ngày 3 đêm)` : '01/06 – 04/06/2025 (4 ngày 3 đêm)',
-      totalDays: 4,
+      datesSummary: synced.datesSummary,
+      totalDays: synced.totalDays,
       coverImage: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b675?w=1200&auto=format&fit=crop&q=80',
-      days,
-      activities,
+      days: synced.days,
+      activities: synced.activities,
       aiSummary: 'Thời tiết Đà Lạt se lạnh vào sáng sớm và tối, nên chuẩn bị áo khoác mỏng. Đã bố trí xen kẽ giữa các quán cafe view thung lũng và điểm tham quan thiên nhiên.'
     };
   }
@@ -740,14 +1004,15 @@ export function generatePrototypeTripPlan(options: GeneratePlanOptions = {}): Tr
       }
     ];
 
+    const synced = synchronizeTripDates(days, activities, options);
     return {
       tripTitle: 'Chinh Phục Đèo Hùng Vĩ & Sông Nho Quế Hà Giang 🏔️🏍️',
       destination: 'Hà Giang',
-      datesSummary: options.startDate && options.endDate ? `${options.startDate} – ${options.endDate} (4 ngày 3 đêm)` : '15/10 – 18/10/2025 (4 ngày 3 đêm)',
-      totalDays: 4,
+      datesSummary: synced.datesSummary,
+      totalDays: synced.totalDays,
       coverImage: 'https://images.unsplash.com/photo-1528127269322-539801943592?w=1200&auto=format&fit=crop&q=80',
-      days,
-      activities,
+      days: synced.days,
+      activities: synced.activities,
       aiSummary: 'Cung đường có độ dốc cao và nhiều cua tay áo, khuyến nghị tài xế vững tay lái hoặc thuê tour xe máy người bản địa dẫn đường!'
     };
   }
@@ -815,14 +1080,15 @@ export function generatePrototypeTripPlan(options: GeneratePlanOptions = {}): Tr
       }
     ];
 
+    const synced = synchronizeTripDates(days, activities, options);
     return {
       tripTitle: 'Hà Nội Mùa Thu — Dấu Ấn Nghìn Năm Văn Hiến 🍂🏛️',
       destination: 'Hà Nội',
-      datesSummary: options.startDate && options.endDate ? `${options.startDate} – ${options.endDate} (4 ngày 3 đêm)` : '10/10 – 13/10/2025 (4 ngày 3 đêm)',
-      totalDays: 4,
+      datesSummary: synced.datesSummary,
+      totalDays: synced.totalDays,
       coverImage: 'https://images.unsplash.com/photo-1509062522246-3755977927d7?w=1200&auto=format&fit=crop&q=80',
-      days,
-      activities,
+      days: synced.days,
+      activities: synced.activities,
       aiSummary: 'Lịch trình được sắp xếp tối ưu để dạo bộ phố cổ, trải nghiệm ẩm thực di sản và tận hưởng trọn vẹn tiết trời thu se lạnh tuyệt đẹp của thủ đô!'
     };
   }
@@ -877,14 +1143,15 @@ export function generatePrototypeTripPlan(options: GeneratePlanOptions = {}): Tr
       }
     ];
 
+    const synced = synchronizeTripDates(days, activities, options);
     return {
       tripTitle: 'Hành Trình Sa Pa — Nóc Nhà Đông Dương & Biển Mây 🏔️☁️',
       destination: 'Sa Pa, Lào Cai',
-      datesSummary: options.startDate && options.endDate ? `${options.startDate} – ${options.endDate} (4 ngày 3 đêm)` : '01/11 – 04/11/2025 (4 ngày 3 đêm)',
-      totalDays: 4,
+      datesSummary: synced.datesSummary,
+      totalDays: synced.totalDays,
       coverImage: 'https://images.unsplash.com/photo-1528127269322-539801943592?w=1200&auto=format&fit=crop&q=80',
-      days,
-      activities,
+      days: synced.days,
+      activities: synced.activities,
       aiSummary: 'Thời tiết Sa Pa thay đổi 4 mùa trong 1 ngày, AI đã tính toán khung giờ săn mây đỉnh Fansipan đẹp nhất lúc 9:30 - 11:30 sáng!'
     };
   }
@@ -939,14 +1206,15 @@ export function generatePrototypeTripPlan(options: GeneratePlanOptions = {}): Tr
       }
     ];
 
+    const synced = synchronizeTripDates(days, activities, options);
     return {
       tripTitle: 'Nha Trang Biển Xanh — Thiên Đường Vịnh Ngọc 🌊🏝️',
       destination: 'Nha Trang, Khánh Hòa',
-      datesSummary: options.startDate && options.endDate ? `${options.startDate} – ${options.endDate} (4 ngày 3 đêm)` : '05/07 – 08/07/2025 (4 ngày 3 đêm)',
-      totalDays: 4,
+      datesSummary: synced.datesSummary,
+      totalDays: synced.totalDays,
       coverImage: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=1200&auto=format&fit=crop&q=80',
-      days,
-      activities,
+      days: synced.days,
+      activities: synced.activities,
       aiSummary: 'Lịch trình cân bằng giữa nghỉ dưỡng biển cao cấp, lặn ngắm san hô rực rỡ và khám phá ẩm thực hải sản tươi sống trứ danh Nha Trang!'
     };
   }
@@ -1014,14 +1282,15 @@ export function generatePrototypeTripPlan(options: GeneratePlanOptions = {}): Tr
       }
     ];
 
+    const synced = synchronizeTripDates(days, activities, options);
     return {
       tripTitle: `Hành Trình Khám Phá ${dest} — Bản Sắc Việt Nam 🌟✨`,
       destination: dest,
-      datesSummary: options.startDate && options.endDate ? `${options.startDate} – ${options.endDate} (4 ngày 3 đêm)` : '15/08 – 18/08/2025 (4 ngày 3 đêm)',
-      totalDays: 4,
+      datesSummary: synced.datesSummary,
+      totalDays: synced.totalDays,
       coverImage: 'https://images.unsplash.com/photo-1528127269322-539801943592?w=1200&auto=format&fit=crop&q=80',
-      days,
-      activities,
+      days: synced.days,
+      activities: synced.activities,
       aiSummary: `Lịch trình được TripMate AI tính toán tối ưu riêng cho ${dest}, phối hợp nhịp nhàng giữa các danh lam thắng cảnh, văn hóa ẩm thực và thời gian nghỉ dưỡng của đoàn!`
     };
   }
@@ -1234,14 +1503,15 @@ export function generatePrototypeTripPlan(options: GeneratePlanOptions = {}): Tr
     }
   ];
 
+  const synced = synchronizeTripDates(days, activities, options);
   return {
     tripTitle: `Chuyến đi ${dest} rực rỡ 🌊🏮`,
     destination: dest,
-    datesSummary: options.startDate && options.endDate ? `${options.startDate} – ${options.endDate} (4 ngày 3 đêm)` : '15/04 – 18/04/2025 (4 ngày 3 đêm)',
-    totalDays: 4,
+    datesSummary: synced.datesSummary,
+    totalDays: synced.totalDays,
     coverImage: 'https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?w=1200&auto=format&fit=crop&q=80',
-    days,
-    activities,
+    days: synced.days,
+    activities: synced.activities,
     aiSummary: 'Lịch trình được AI tối ưu hóa tuyến đường di chuyển hợp lý, xen kẽ giữa trải nghiệm biển Mỹ Khê, danh thắng Bà Nà Hills và vẻ đẹp cổ kính lung linh đèn hoa đăng phố cổ Hội An!'
   };
 }
