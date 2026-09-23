@@ -4,7 +4,6 @@ import {
   Plus,
   ArrowUpRight,
   ArrowDownLeft,
-  QrCode,
   Receipt,
   CheckCircle2,
   Clock,
@@ -29,7 +28,7 @@ interface BudgetViewProps {
   userBankQr?: UserBankQr;
   onOpenUpdateQr?: () => void;
   onAddExpense: () => void;
-  onOpenSettleQr: (payerName: string, amount: number, mode?: 'pay' | 'receive') => void;
+  onOpenSettleQr?: (payerName: string, amount: number, mode?: 'pay' | 'receive') => void;
   onUpdateExpense?: (updatedExpense: ExpenseItem) => void;
   onDeleteExpense?: (expenseId: string) => void;
   onSwitchToItinerary?: () => void;
@@ -233,59 +232,6 @@ export const BudgetView: React.FC<BudgetViewProps> = ({
         </div>
       </div>
 
-      {/* Personal QR Receiving Card */}
-      <div className="mb-5 p-4 rounded-3xl bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-sky-500/10 dark:from-emerald-950/40 dark:via-teal-950/30 dark:to-sky-950/40 border border-emerald-200/80 dark:border-emerald-800/60 shadow-xs">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs">
-              <QrCode className="w-4 h-4" />
-            </div>
-            <div>
-              <h4 className="text-xs font-black text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
-                <span>Mã QR nhận tiền của bạn</span>
-                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">
-                  {userBankQr?.customQrUrl ? 'QR Tự tải' : 'VietQR Auto'}
-                </span>
-              </h4>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                Để các thành viên quét chuyển tiền quyết toán trực tiếp cho bạn
-              </p>
-            </div>
-          </div>
-
-          <button
-            onClick={onOpenUpdateQr}
-            className="px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-slate-700 text-emerald-700 dark:text-emerald-300 text-xs font-bold border border-emerald-200 dark:border-emerald-700 shadow-xs flex items-center gap-1 transition-colors cursor-pointer"
-          >
-            <Pencil className="w-3 h-3" />
-            <span>Cập nhật</span>
-          </button>
-        </div>
-
-        <div className="bg-white/80 dark:bg-slate-800/80 p-2.5 rounded-2xl border border-emerald-100 dark:border-slate-700/80 flex items-center justify-between">
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 text-xs font-bold text-slate-800 dark:text-slate-200">
-              <span className="truncate">{userBankQr?.accountName || 'NGUYỄN VIỆT HÙNG'}</span>
-              <span className="text-slate-300 dark:text-slate-600">•</span>
-              <span className="font-mono text-sky-700 dark:text-sky-300 truncate">
-                {userBankQr?.accountNumber || '0987 654 321'}
-              </span>
-            </div>
-            <p className="text-[11px] text-slate-400 mt-0.5">
-              Ngân hàng: <strong>{userBankQr?.bankName || 'MB Bank (Quân Đội)'}</strong>
-            </p>
-          </div>
-
-          <button
-            onClick={() => onOpenSettleQr(userBankQr?.accountName || 'Tôi', 0, 'receive')}
-            className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold flex items-center gap-1 flex-shrink-0 transition-colors ml-2 cursor-pointer"
-          >
-            <QrCode className="w-3 h-3" />
-            <span>Mở mã QR</span>
-          </button>
-        </div>
-      </div>
-
       {/* Settle Up Group Section */}
       <div className="mb-5">
         <div className="flex items-center justify-between mb-3">
@@ -294,7 +240,7 @@ export const BudgetView: React.FC<BudgetViewProps> = ({
               Quyết toán chia tiền nhóm ({currentDestination})
             </h3>
             <p className="text-[11px] text-slate-400">
-              Nhận tiền và trả tiền minh bạch với mã VietQR
+              Bảng cân đối thu chi và số tiền cần đóng/nhận của từng thành viên
             </p>
           </div>
           <span className="text-xs text-slate-400 font-semibold">{members.length} thành viên</span>
@@ -323,50 +269,25 @@ export const BudgetView: React.FC<BudgetViewProps> = ({
                 </div>
 
                 <div className="flex items-center gap-2">
-                  {/* Status 1: ĐƯỢC NHẬN LẠI TIỀN -> CÓ NÚT QR NHẬN TIỀN */}
+                  {/* Status 1: ĐƯỢC NHẬN LẠI TIỀN */}
                   {isOwed && (
-                    <div className="flex items-center gap-2">
-                      <div className="text-right">
-                        <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 justify-end">
-                          <ArrowDownLeft className="w-3.5 h-3.5" />
-                          +{formatCurrency(Math.abs(diff))} đ
-                        </span>
-                        <span className="text-[10px] text-emerald-600/80 font-medium">Được nhận lại</span>
-                      </div>
-
-                      {/* QR Button for receiving money */}
-                      <button
-                        onClick={() => onOpenSettleQr(member.name, Math.abs(diff), 'receive')}
-                        className="px-2 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 text-emerald-700 dark:text-emerald-300 font-bold text-[11px] flex items-center gap-1 border border-emerald-200 dark:border-emerald-800/80 shadow-xs transition-colors"
-                        title="Mở mã QR để nhận tiền từ các thành viên khác"
-                      >
-                        <QrCode className="w-3.5 h-3.5" />
-                        <span>QR nhận</span>
-                      </button>
+                    <div className="text-right">
+                      <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 justify-end">
+                        <ArrowDownLeft className="w-3.5 h-3.5" />
+                        +{formatCurrency(Math.abs(diff))} đ
+                      </span>
+                      <span className="text-[10px] text-emerald-600/80 font-medium">Được nhận lại</span>
                     </div>
                   )}
 
-                  {/* Status 2: CẦN ĐÓNG THÊM -> CÓ NÚT QR TRẢ TIỀN */}
+                  {/* Status 2: CẦN ĐÓNG THÊM */}
                   {isOwing && (
-                    <div className="flex items-center gap-2">
-                      <div className="text-right">
-                        <span className="text-xs font-bold text-orange-600 dark:text-orange-400 flex items-center gap-1 justify-end">
-                          <ArrowUpRight className="w-3.5 h-3.5" />
-                          -{formatCurrency(Math.abs(diff))} đ
-                        </span>
-                        <span className="text-[10px] text-slate-400">Cần đóng thêm</span>
-                      </div>
-
-                      {!member.isHost && (
-                        <button
-                          onClick={() => onOpenSettleQr(member.name, Math.abs(diff), 'pay')}
-                          className="px-2 py-1.5 rounded-xl bg-sky-50 dark:bg-slate-700 hover:bg-sky-100 text-sky-600 dark:text-sky-400 font-bold text-[11px] flex items-center gap-1 border border-sky-200 dark:border-slate-600 transition-colors"
-                          title="Quét QR chuyển khoản thanh toán"
-                        >
-                          <QrCode className="w-3.5 h-3.5" />
-                          <span>QR trả</span>
-                        </button>
-                      )}
+                    <div className="text-right">
+                      <span className="text-xs font-bold text-orange-600 dark:text-orange-400 flex items-center gap-1 justify-end">
+                        <ArrowUpRight className="w-3.5 h-3.5" />
+                        -{formatCurrency(Math.abs(diff))} đ
+                      </span>
+                      <span className="text-[10px] text-slate-400">Cần đóng thêm</span>
                     </div>
                   )}
 

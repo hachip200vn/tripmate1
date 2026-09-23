@@ -17,6 +17,7 @@ export type Trip = {
   title: string;
   destination: string;
   departureLocation?: string;
+  origin?: string;
   datesSummary: string;
   startDate?: string;
   endDate?: string;
@@ -33,6 +34,11 @@ export type Trip = {
   aiSummary?: string;
   transportType?: string;
   estimatedBudget?: number;
+  budgetPerPerson?: number;
+  budgetTotal?: number;
+  departureTime?: string;
+  returnTime?: string;
+  travelStyle?: string;
   notes?: string;
   createdAt?: string;
 };
@@ -41,6 +47,7 @@ export type TripPlanData = {
   tripTitle: string;
   destination: string;
   departureLocation?: string;
+  origin?: string;
   datesSummary: string;
   startDate?: string;
   endDate?: string;
@@ -51,7 +58,21 @@ export type TripPlanData = {
   aiSummary?: string;
   transportType?: string;
   estimatedBudget?: number;
+  budgetPerPerson?: number;
+  budgetTotal?: number;
+  departureTime?: string;
+  returnTime?: string;
+  travelStyle?: string;
   notes?: string;
+};
+
+export type ActivityComment = {
+  id: string;
+  activityId?: string;
+  authorName: string;
+  authorRole?: string;
+  content: string;
+  createdAt: string;
 };
 
 export type TimelineActivity = {
@@ -75,6 +96,7 @@ export type TimelineActivity = {
   driverInfo?: string;
   isCompleted?: boolean;
   coordinates?: { lat: number; lng: number };
+  comments?: ActivityComment[];
 };
 
 export type NotificationItem = {
