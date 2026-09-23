@@ -23,6 +23,7 @@ import { JoinTripModal } from './components/JoinTripModal';
 import { TripsListView } from './components/TripsListView';
 import { ManualTripModal } from './components/ManualTripModal';
 import { AiDestinationRecommendModal } from './components/AiDestinationRecommendModal';
+import { AuthScreen } from './components/AuthScreen';
 
 import {
   initialMembers,
@@ -61,10 +62,22 @@ export default function App() {
     return localStorage.getItem('tripmate_theme') === 'dark';
   });
 
+  // User Authentication State (Persisted in localStorage)
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
+    const savedAuth = localStorage.getItem('tripmate_is_logged_in');
+    return savedAuth !== null ? savedAuth === 'true' : true;
+  });
+
   // User Profile information
-  const [userName, setUserName] = useState('Nguyễn Việt Hùng');
-  const [userEmail, setUserEmail] = useState('nguyenviethung.co@gmail.com');
-  const [userPhone, setUserPhone] = useState('0987 654 321');
+  const [userName, setUserName] = useState(() => {
+    return localStorage.getItem('tripmate_user_name') || 'Nguyễn Việt Hùng';
+  });
+  const [userEmail, setUserEmail] = useState(() => {
+    return localStorage.getItem('tripmate_user_email') || 'nguyenviethung.co@gmail.com';
+  });
+  const [userPhone, setUserPhone] = useState(() => {
+    return localStorage.getItem('tripmate_user_phone') || '0987 654 321';
+  });
 
   // Multi-Trip State Management (Persisted in localStorage)
   const [trips, setTrips] = useState<Trip[]>(() => {
@@ -649,7 +662,67 @@ export default function App() {
     showToast('Đã đánh dấu đọc tất cả thông báo!');
   };
 
+  // Logout handler - transitions completely to full-screen AuthScreen (not a modal popup)
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    localStorage.setItem('tripmate_is_logged_in', 'false');
+    setShowAuthModal(false);
+    showToast('Đã đăng xuất tài khoản.');
+  };
+
+  // Login handler
+  const handleLoginSuccess = (userData: { name: string; email: string; phone?: string }) => {
+    setIsLoggedIn(true);
+    localStorage.setItem('tripmate_is_logged_in', 'true');
+    setUserName(userData.name);
+    localStorage.setItem('tripmate_user_name', userData.name);
+    setUserEmail(userData.email);
+    localStorage.setItem('tripmate_user_email', userData.email);
+    if (userData.phone) {
+      setUserPhone(userData.phone);
+      localStorage.setItem('tripmate_user_phone', userData.phone);
+    }
+    setCurrentTab('lich-trinh');
+    showToast(`Chào mừng ${userData.name} quay trở lại TripMate! ✨`);
+  };
+
   const unreadCount = notifications.filter((n) => n.isUnread).length;
+
+  // When logged out, show the full-screen Login / Register page instead of the main app or a popup
+  if (!isLoggedIn) {
+    return (
+      <div className={`min-h-screen ${darkMode ? 'dark' : ''}`}>
+        <AuthScreen
+          darkMode={darkMode}
+          onToggleDarkMode={toggleDarkMode}
+          onLoginSuccess={handleLoginSuccess}
+          onContinueAsGuest={() => {
+            setIsLoggedIn(true);
+            localStorage.setItem('tripmate_is_logged_in', 'true');
+            showToast('Bạn đang sử dụng TripMate với tư cách Khách.');
+          }}
+          lastUserEmail={userEmail}
+          lastUserName={userName}
+        />
+
+        {/* Toast Feedback Notification */}
+        <AnimatePresence>
+          {toastMessage && (
+            <motion.div
+              initial={{ opacity: 0, y: 20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.95 }}
+              transition={{ duration: 0.2 }}
+              className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-2xl bg-slate-900/90 dark:bg-white/90 text-white dark:text-slate-900 font-bold text-xs shadow-2xl flex items-center gap-2 backdrop-blur-md"
+            >
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 dark:text-emerald-600 flex-shrink-0" />
+              <span>{toastMessage}</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col items-center selection:bg-sky-500 selection:text-white transition-colors duration-200">
@@ -663,7 +736,7 @@ export default function App() {
           unreadCount={unreadCount}
           onOpenNotifications={() => setShowNotificationsModal(true)}
           onOpenProfileOrAuth={() => setCurrentTab('tai-khoan')}
-          isLoggedIn={true}
+          isLoggedIn={isLoggedIn}
           activeTripTitle={activeTrip?.title}
         />
 
@@ -848,7 +921,7 @@ export default function App() {
                   onOpenPasswordModal={() => setShowPasswordModal(true)}
                   onOpenNotifications={() => setShowNotificationsModal(true)}
                   onOpenTripManager={() => setCurrentTab('chuyen-di')}
-                  onLogoutOrSwitchAccount={() => setShowAuthModal(true)}
+                  onLogoutOrSwitchAccount={handleLogout}
                 />
               </motion.div>
             )}

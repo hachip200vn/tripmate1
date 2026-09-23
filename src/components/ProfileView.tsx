@@ -237,11 +237,12 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
 
       {/* Logout / Switch Account */}
       <button
+        type="button"
         onClick={onLogoutOrSwitchAccount}
-        className="w-full h-12 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-red-600 dark:text-red-400 font-bold text-xs flex items-center justify-center gap-2 transition-colors"
+        className="w-full h-12 rounded-2xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-950/70 text-rose-600 dark:text-rose-400 border border-rose-200/80 dark:border-rose-900/60 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs active:scale-[0.99]"
       >
         <LogOut className="w-4 h-4" />
-        <span>Chuyển tài khoản / Đăng xuất</span>
+        <span>Đăng xuất tài khoản</span>
       </button>
     </div>
   );
