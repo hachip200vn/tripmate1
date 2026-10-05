@@ -26,7 +26,6 @@ interface TripsListViewProps {
   onBack?: () => void;
   onSelectTrip: (tripId: string) => void;
   onOpenCreateWithAi: () => void;
-  onOpenManualCreate?: () => void;
   onOpenJoinTrip: () => void;
   onOpenInviteForTrip: (trip: Trip) => void;
   onDeleteTrip: (tripId: string) => void;
@@ -37,7 +36,6 @@ export const TripsListView: React.FC<TripsListViewProps> = ({
   currentTripId,
   onSelectTrip,
   onOpenCreateWithAi,
-  onOpenManualCreate,
   onOpenJoinTrip,
   onOpenInviteForTrip,
   onDeleteTrip,
@@ -175,14 +173,13 @@ export const TripsListView: React.FC<TripsListViewProps> = ({
               Chưa có chuyến đi nào trong mục này
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mb-4 max-w-xs mx-auto">
-              Bắt đầu tạo một lịch trình du lịch mới bằng AI hoặc tham gia cùng bạn bè qua mã phòng.
+              Bắt đầu tạo một lịch trình du lịch mới hoặc tham gia cùng bạn bè qua mã phòng.
             </p>
             <button
               type="button"
               onClick={onOpenCreateWithAi}
-              className="px-4 py-2 rounded-xl bg-sky-600 text-white font-bold text-xs inline-flex items-center gap-1.5 shadow-sm"
+              className="px-4 py-2 rounded-xl bg-sky-700 text-white font-bold text-xs inline-flex items-center gap-1.5 shadow-sm hover:bg-sky-800 transition-colors"
             >
-              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
               <span>Tạo lịch trình ngay</span>
             </button>
           </div>
@@ -377,29 +374,17 @@ export const TripsListView: React.FC<TripsListViewProps> = ({
         )}
       </div>
 
-      {/* Nút Tạo lịch trình mới (Tự động AI + Thủ công) */}
-      <div className="mt-5 pt-3 space-y-2.5">
+      {/* Nút Tạo lịch trình mới */}
+      <div className="mt-5 pt-3">
         <button
           type="button"
           onClick={onOpenCreateWithAi}
-          className="w-full h-12 rounded-2xl bg-gradient-to-r from-sky-600 via-sky-700 to-indigo-600 hover:from-sky-700 hover:to-indigo-700 text-white font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg shadow-sky-600/25 active:scale-[0.98] transition-all cursor-pointer"
-          title="Gợi ý tự động 5 điểm đến xếp theo % phù hợp"
+          className="w-full h-12 rounded-2xl bg-sky-700 hover:bg-sky-800 text-white font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg shadow-sky-700/25 active:scale-[0.98] transition-all cursor-pointer"
+          title="Tạo lịch trình chuyến đi mới"
         >
-          <Sparkles className="w-4 h-4 text-amber-300" />
-          <span>Gợi ý điểm đến tự động với AI (Top 5 %)</span>
+          <Plus className="w-4 h-4" />
+          <span>Tạo lịch trình chuyến đi mới</span>
         </button>
-
-        {onOpenManualCreate && (
-          <button
-            type="button"
-            onClick={onOpenManualCreate}
-            className="w-full h-11 rounded-2xl bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/80 text-slate-800 dark:text-slate-200 font-bold text-xs flex items-center justify-center gap-2 border border-slate-200 dark:border-slate-700 shadow-2xs active:scale-[0.98] transition-all cursor-pointer"
-            title="Tự nhập điểm đi, điểm đến, ngân sách..."
-          >
-            <Compass className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
-            <span>Tự tạo lịch trình thủ công</span>
-          </button>
-        )}
       </div>
     </div>
   );

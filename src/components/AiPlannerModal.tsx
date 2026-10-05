@@ -16,11 +16,31 @@ import {
   Search,
   Map,
   Navigation,
-  AlertCircle
+  AlertCircle,
+  ArrowRight
 } from 'lucide-react';
 import { TripPlanData } from '../types';
 import { generatePrototypeTripPlan } from '../data/tripData';
 import { searchDestinations, DestinationItem, POPULAR_DESTINATIONS } from '../data/vietnamDestinations';
+import { VietnamMapSelector } from './VietnamMapSelector';
+
+// Date helpers: format local ISO YYYY-MM-DD
+const getTodayIso = (): string => {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
+
+const getFutureIso = (daysAhead: number = 3): string => {
+  const now = new Date();
+  now.setDate(now.getDate() + daysAhead);
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+};
 
 interface AiPlannerModalProps {
   isOpen: boolean;
@@ -35,12 +55,18 @@ export const AiPlannerModal: React.FC<AiPlannerModalProps> = ({
 }) => {
   if (!isOpen) return null;
 
+  const [departureLocation, setDepartureLocation] = useState('Hà Nội');
+  const [isDepDropdownOpen, setIsDepDropdownOpen] = useState(false);
+  const depContainerRef = useRef<HTMLDivElement>(null);
+
   const [destination, setDestination] = useState('Đà Nẵng — Hội An');
   const [isDestDropdownOpen, setIsDestDropdownOpen] = useState(false);
   const destContainerRef = useRef<HTMLDivElement>(null);
 
-  const [startDate, setStartDate] = useState('2025-04-15');
-  const [endDate, setEndDate] = useState('2025-04-18');
+  // Default dates: startDate is TODAY, endDate is today + 3 days
+  const [startDate, setStartDate] = useState(() => getTodayIso());
+  const [endDate, setEndDate] = useState(() => getFutureIso(3));
+  const [showVietnamMap, setShowVietnamMap] = useState(true);
   const [membersCount, setMembersCount] = useState(5);
   const [budgetTier, setBudgetTier] = useState<'budget' | 'standard' | 'luxury'>('standard');
   const [selectedVibes, setSelectedVibes] = useState<string[]>([
@@ -55,11 +81,22 @@ export const AiPlannerModal: React.FC<AiPlannerModalProps> = ({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
 
-  // Close destination dropdown when clicking outside
+  // When modal opens, guarantee date starts today (user request: ngày đi mặc định sẽ là ngày hôm nay luôn để đỡ phải chọn lại năm)
+  useEffect(() => {
+    if (isOpen) {
+      setStartDate(getTodayIso());
+      setEndDate(getFutureIso(3));
+    }
+  }, [isOpen]);
+
+  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (destContainerRef.current && !destContainerRef.current.contains(event.target as Node)) {
         setIsDestDropdownOpen(false);
+      }
+      if (depContainerRef.current && !depContainerRef.current.contains(event.target as Node)) {
+        setIsDepDropdownOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -81,24 +118,20 @@ export const AiPlannerModal: React.FC<AiPlannerModalProps> = ({
     onClose();
   };
 
-  const destinationChips = [
-    'Đà Nẵng — Hội An',
-    'Hà Nội',
-    'Hà Giang',
-    'Phú Quốc',
-    'Đà Lạt',
-    'Sa Pa',
-    'Nha Trang',
-    'Huế'
-  ];
+  // Departure autocomplete suggestions: strictly matches query
+  const suggestedDepartures: DestinationItem[] = React.useMemo(() => {
+    if (!departureLocation.trim()) {
+      return POPULAR_DESTINATIONS;
+    }
+    return searchDestinations(departureLocation);
+  }, [departureLocation]);
 
-  // Destination autocomplete suggestions
+  // Destination autocomplete suggestions: strictly matches query (e.g. "ha" -> Hà Nội, Hải Phòng, Hạ Long...)
   const suggestedDestinations: DestinationItem[] = React.useMemo(() => {
     if (!destination.trim()) {
       return POPULAR_DESTINATIONS;
     }
-    const results = searchDestinations(destination);
-    return results.length > 0 ? results : POPULAR_DESTINATIONS.slice(0, 6);
+    return searchDestinations(destination);
   }, [destination]);
 
   const allVibes = [
@@ -186,21 +219,21 @@ export const AiPlannerModal: React.FC<AiPlannerModalProps> = ({
 
     setIsGenerating(true);
     setErrorMsg(null);
-    setGenerationStep('Đang kích hoạt TripMate AI Core Engine...');
+    setGenerationStep('Đang chuẩn bị lịch trình chuyến đi...');
 
     timersRef.current.forEach(clearTimeout);
     timersRef.current = [];
 
     const t1 = setTimeout(() => {
-      setGenerationStep(`Đang phân tích điểm đến ${destination || 'du lịch'} & tối ưu cung đường...`);
+      setGenerationStep(`Đang tìm kiếm các địa điểm nổi bật tại ${destination || 'điểm đến'}...`);
     }, 850);
 
     const t2 = setTimeout(() => {
-      setGenerationStep('Đang tính toán mốc giờ vàng, ẩm thực địa phương & chi phí nhóm...');
+      setGenerationStep('Đang sắp xếp các mốc thời gian, điểm ăn uống & chi phí...');
     }, 1850);
 
     const t3 = setTimeout(() => {
-      setGenerationStep('Đang hoàn thiện các thẻ hoạt động & mẹo du lịch thông minh...');
+      setGenerationStep('Đang hoàn thiện các hoạt động chi tiết cho chuyến đi...');
     }, 2850);
 
     const t4 = setTimeout(() => {
@@ -214,6 +247,8 @@ export const AiPlannerModal: React.FC<AiPlannerModalProps> = ({
 
         const plan = generatePrototypeTripPlan({
           destination,
+          origin: departureLocation.trim() || 'Hà Nội',
+          departureLocation: departureLocation.trim() || 'Hà Nội',
           startDate,
           endDate,
           membersCount,
@@ -245,14 +280,13 @@ export const AiPlannerModal: React.FC<AiPlannerModalProps> = ({
         <div className="flex items-start justify-between pb-3 border-b border-slate-100 dark:border-slate-800 mb-4 sticky top-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md z-10">
           <div>
             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 text-[10px] font-extrabold uppercase tracking-wider mb-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-sky-500 animate-ping" />
-              TripMate AI Smart Engine V2.4
+              TripMate Planner
             </span>
             <h2 className="text-lg font-black text-slate-900 dark:text-slate-100 tracking-tight leading-snug">
-              Lập kế hoạch du lịch bằng <span className="text-sky-600 dark:text-sky-400">Trí tuệ nhân tạo</span>
+              Lập kế hoạch du lịch mới
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Chỉ mất vài giây để AI gợi ý lịch trình cá nhân hóa hoàn hảo cho chuyến đi của bạn.
+              Nhập thông tin điểm đến và thời gian để sắp xếp lịch trình chi tiết cho chuyến đi của bạn.
             </p>
           </div>
 
@@ -266,23 +300,143 @@ export const AiPlannerModal: React.FC<AiPlannerModalProps> = ({
 
         {/* Form Fields */}
         <div className="space-y-4">
-          {/* 1. Destination with Google Maps & 63 Vietnam Provinces Autocomplete */}
+          {/* Vietnam Interactive Map Toggle & Component (USER REQUEST: Tích hợp bản đồ Việt Nam vào phần nhập điểm xuất phát và điểm đến) */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                <Map className="w-4 h-4 text-sky-600" />
+                Bản đồ lộ trình Việt Nam trực quan
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowVietnamMap(!showVietnamMap)}
+                className="text-[11px] font-bold text-sky-600 hover:text-sky-700 dark:text-sky-400 flex items-center gap-1 px-2.5 py-1 rounded-xl bg-sky-50 dark:bg-sky-950/60 border border-sky-200 dark:border-sky-800 transition-colors"
+              >
+                <span>{showVietnamMap ? 'Thu gọn bản đồ' : 'Mở bản đồ tương tác'}</span>
+              </button>
+            </div>
+
+            {showVietnamMap && (
+              <div className="mb-2 animate-in fade-in duration-200">
+                <VietnamMapSelector
+                  currentDeparture={departureLocation}
+                  currentDestination={destination}
+                  onSelectDeparture={(loc) => setDepartureLocation(loc)}
+                  onSelectDestination={(loc) => setDestination(loc)}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Departure Location */}
+          <div
+            ref={depContainerRef}
+            className="bg-slate-50 dark:bg-slate-800/60 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 relative"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                <PlaneTakeoff className="w-4 h-4 text-sky-600" />
+                Điểm xuất phát (Khởi hành từ đâu)
+              </label>
+              <span className="text-[10px] font-bold text-sky-700 dark:text-sky-300 bg-sky-100 dark:bg-sky-950/60 px-2 py-0.5 rounded-full">
+                Nơi bắt đầu
+              </span>
+            </div>
+
+            <div className="relative">
+              <input
+                type="text"
+                value={departureLocation}
+                onFocus={() => setIsDepDropdownOpen(true)}
+                onChange={(e) => {
+                  setDepartureLocation(e.target.value);
+                  setIsDepDropdownOpen(true);
+                }}
+                placeholder="Nhập nơi bạn xuất phát (VD: Hà Nội, Hải Phòng, TP.HCM...)"
+                className="w-full h-11 pl-9 pr-8 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-bold text-xs text-slate-800 dark:text-slate-100 outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition-all shadow-sm"
+              />
+              <MapPin className="w-4 h-4 absolute left-3 top-3.5 text-slate-400" />
+              {departureLocation && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDepartureLocation('');
+                    setIsDepDropdownOpen(true);
+                  }}
+                  className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 w-5 h-5 flex items-center justify-center rounded-full hover:bg-slate-100 dark:hover:bg-slate-800"
+                >
+                  ✕
+                </button>
+              )}
+
+              {/* Departure Autocomplete Dropdown */}
+              {isDepDropdownOpen && (
+                <div className="absolute left-0 right-0 top-12 z-50 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden max-h-64 flex flex-col animate-in fade-in slide-in-from-top-1 duration-150">
+                  <div className="px-3 py-2 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                    <span className="flex items-center gap-1.5">
+                      <Navigation className="w-3 h-3 text-sky-600" />
+                      {departureLocation.trim()
+                        ? `Gợi ý xuất phát "${departureLocation}" (${suggestedDepartures.length})`
+                        : 'Điểm xuất phát phổ biến'}
+                    </span>
+                    <span className="text-[10px] text-slate-400">Nhấp để chọn</span>
+                  </div>
+
+                  <div className="overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/60">
+                    {suggestedDepartures.map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => {
+                          setDepartureLocation(item.name);
+                          setIsDepDropdownOpen(false);
+                        }}
+                        className={`w-full text-left px-3 py-2.5 hover:bg-sky-50/70 dark:hover:bg-slate-800 transition-colors flex items-start gap-2.5 ${
+                          departureLocation.toLowerCase() === item.name.toLowerCase()
+                            ? 'bg-sky-50/50 dark:bg-slate-800/50'
+                            : ''
+                        }`}
+                      >
+                        <div className="w-7 h-7 rounded-lg bg-sky-100 dark:bg-slate-800 text-sky-600 dark:text-sky-400 flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <PlaneTakeoff className="w-4 h-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
+                              {item.name}
+                            </span>
+                            <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded border bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-950/50 dark:text-sky-300 dark:border-sky-800/50">
+                              {item.region}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                            {item.tag || item.province}
+                          </p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 1. Destination with Autocomplete */}
           <div
             ref={destContainerRef}
             className="bg-slate-50 dark:bg-slate-800/60 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 relative"
           >
             <div className="flex items-center justify-between mb-2">
               <label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                <MapPin className="w-4 h-4 text-sky-600" />
+                <MapPin className="w-4 h-4 text-emerald-600" />
                 Điểm đến bạn muốn tới
               </label>
-              <div className="flex items-center gap-1 text-[10px] font-bold text-sky-700 dark:text-sky-300 bg-sky-100 dark:bg-sky-950/60 px-2 py-0.5 rounded-full border border-sky-200 dark:border-sky-800/60">
-                <Map className="w-3 h-3 text-sky-600" />
-                <span>Bản đồ 63 tỉnh thành</span>
-              </div>
+              <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full">
+                Nơi trải nghiệm
+              </span>
             </div>
 
-            <div className="relative mb-2">
+            <div className="relative">
               <input
                 type="text"
                 value={destination}
@@ -291,8 +445,8 @@ export const AiPlannerModal: React.FC<AiPlannerModalProps> = ({
                   setDestination(e.target.value);
                   setIsDestDropdownOpen(true);
                 }}
-                placeholder="Nhập tên tỉnh thành (Ví dụ: H → Hà Nội, Hà Giang...)"
-                className="w-full h-11 pl-9 pr-8 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-bold text-xs text-slate-800 dark:text-slate-100 outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition-all shadow-sm"
+                placeholder="Nhập tên tỉnh thành (Ví dụ: Ha → Hà Nội, Hải Phòng...)"
+                className="w-full h-11 pl-9 pr-8 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-bold text-xs text-slate-800 dark:text-slate-100 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all shadow-sm"
               />
               <Search className="w-4 h-4 absolute left-3 top-3.5 text-slate-400" />
               {destination && (
@@ -308,12 +462,12 @@ export const AiPlannerModal: React.FC<AiPlannerModalProps> = ({
                 </button>
               )}
 
-              {/* Autocomplete Dropdown Menu */}
+              {/* Destination Autocomplete Dropdown Menu */}
               {isDestDropdownOpen && (
                 <div className="absolute left-0 right-0 top-12 z-50 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden max-h-72 flex flex-col animate-in fade-in slide-in-from-top-1 duration-150">
                   <div className="px-3 py-2 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] font-semibold text-slate-500 dark:text-slate-400">
                     <span className="flex items-center gap-1.5">
-                      <Navigation className="w-3 h-3 text-sky-600" />
+                      <Navigation className="w-3 h-3 text-emerald-600" />
                       {destination.trim()
                         ? `Gợi ý phù hợp "${destination}" (${suggestedDestinations.length})`
                         : 'Địa điểm nổi bật phổ biến tại Việt Nam'}
@@ -338,13 +492,13 @@ export const AiPlannerModal: React.FC<AiPlannerModalProps> = ({
                             setDestination(item.name);
                             setIsDestDropdownOpen(false);
                           }}
-                          className={`w-full text-left px-3 py-2.5 hover:bg-sky-50/70 dark:hover:bg-slate-800 transition-colors flex items-start gap-2.5 ${
+                          className={`w-full text-left px-3 py-2.5 hover:bg-emerald-50/70 dark:hover:bg-slate-800 transition-colors flex items-start gap-2.5 ${
                             destination.toLowerCase() === item.name.toLowerCase()
-                              ? 'bg-sky-50/50 dark:bg-slate-800/50'
+                              ? 'bg-emerald-50/50 dark:bg-slate-800/50'
                               : ''
                           }`}
                         >
-                          <div className="w-7 h-7 rounded-lg bg-sky-100 dark:bg-slate-800 text-sky-600 dark:text-sky-400 flex items-center justify-center flex-shrink-0 mt-0.5">
+                          <div className="w-7 h-7 rounded-lg bg-emerald-100 dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 flex items-center justify-center flex-shrink-0 mt-0.5">
                             <MapPin className="w-4 h-4" />
                           </div>
 
@@ -388,9 +542,9 @@ export const AiPlannerModal: React.FC<AiPlannerModalProps> = ({
                         className="w-full text-left px-3 py-2 bg-slate-50/60 dark:bg-slate-800/40 hover:bg-slate-100 dark:hover:bg-slate-800 text-[11px] text-slate-600 dark:text-slate-300 flex items-center justify-between"
                       >
                         <span>
-                          Sử dụng điểm đến tùy chọn: <strong>&ldquo;{destination}&rdquo;</strong>
+                          Sử dụng điểm đến: <strong>&ldquo;{destination}&rdquo;</strong>
                         </span>
-                        <span className="text-sky-600 dark:text-sky-400 font-bold text-[10px]">
+                        <span className="text-emerald-600 dark:text-emerald-400 font-bold text-[10px]">
                           Xác nhận ↵
                         </span>
                       </button>
@@ -398,28 +552,6 @@ export const AiPlannerModal: React.FC<AiPlannerModalProps> = ({
                   </div>
                 </div>
               )}
-            </div>
-
-            {/* Quick Chips for Popular Destinations */}
-            <div className="flex gap-1.5 flex-wrap">
-              {destinationChips.map((chip) => (
-                <button
-                  key={chip}
-                  type="button"
-                  onClick={() => {
-                    setDestination(chip);
-                    setIsDestDropdownOpen(false);
-                  }}
-                  className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition-colors ${
-                    destination === chip
-                      ? 'bg-sky-600 text-white shadow-sm'
-                      : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-sky-300'
-                  }`}
-                >
-                  {destination === chip && '✨ '}
-                  {chip}
-                </button>
-              ))}
             </div>
           </div>
 
@@ -456,8 +588,21 @@ export const AiPlannerModal: React.FC<AiPlannerModalProps> = ({
                 <input
                   type="date"
                   value={startDate}
+                  min={getTodayIso()}
                   onChange={(e) => {
-                    setStartDate(e.target.value);
+                    const newStart = e.target.value;
+                    setStartDate(newStart);
+                    if (endDate && newStart > endDate) {
+                      const [y, m, d] = newStart.split('-').map(Number);
+                      if (y && m && d) {
+                        const nextDate = new Date(y, m - 1, d);
+                        nextDate.setDate(nextDate.getDate() + 3);
+                        const ey = nextDate.getFullYear();
+                        const em = String(nextDate.getMonth() + 1).padStart(2, '0');
+                        const ed = String(nextDate.getDate()).padStart(2, '0');
+                        setEndDate(`${ey}-${em}-${ed}`);
+                      }
+                    }
                     if (errorMsg) setErrorMsg(null);
                   }}
                   className="w-full bg-transparent font-black text-xs text-slate-800 dark:text-slate-100 outline-none mt-1"
@@ -476,6 +621,7 @@ export const AiPlannerModal: React.FC<AiPlannerModalProps> = ({
                 <input
                   type="date"
                   value={endDate}
+                  min={startDate || getTodayIso()}
                   onChange={(e) => {
                     setEndDate(e.target.value);
                     if (errorMsg) setErrorMsg(null);
@@ -725,7 +871,7 @@ export const AiPlannerModal: React.FC<AiPlannerModalProps> = ({
           <div className="mt-4 p-3.5 rounded-2xl bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800/60 animate-pulse">
             <div className="flex items-center gap-2.5 text-xs font-bold text-sky-700 dark:text-sky-300">
               <Loader2 className="w-4 h-4 animate-spin text-sky-600 dark:text-sky-400" />
-              <span>{generationStep || 'AI đang xử lý yêu cầu...'}</span>
+              <span>{generationStep || 'Đang xử lý yêu cầu...'}</span>
             </div>
             <div className="w-full h-1.5 bg-sky-200/60 dark:bg-sky-900/60 rounded-full mt-2 overflow-hidden">
               <div className="h-full bg-gradient-to-r from-sky-500 to-orange-500 rounded-full animate-indeterminate" />
@@ -741,7 +887,7 @@ export const AiPlannerModal: React.FC<AiPlannerModalProps> = ({
             className={`w-full h-13 rounded-2xl font-extrabold text-sm flex items-center justify-center gap-2 shadow-lg transition-all ${
               isDateReversed
                 ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 border border-slate-300 dark:border-slate-700 cursor-not-allowed shadow-none'
-                : 'bg-gradient-to-r from-sky-600 via-sky-700 to-orange-500 hover:opacity-95 text-white shadow-sky-600/25 active:scale-[0.98] cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed'
+                : 'bg-gradient-to-r from-sky-600 via-sky-700 to-sky-800 hover:opacity-95 text-white shadow-sky-600/25 active:scale-[0.98] cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed'
             }`}
           >
             {isDateReversed ? (
@@ -752,18 +898,18 @@ export const AiPlannerModal: React.FC<AiPlannerModalProps> = ({
             ) : isGenerating ? (
               <>
                 <Loader2 className="w-5 h-5 animate-spin text-white" />
-                <span>AI đang phân tích & lên lịch trình...</span>
+                <span>Đang tạo lịch trình chuyến đi...</span>
               </>
             ) : (
               <>
                 <Sparkles className="w-5 h-5 text-cyan-200" />
-                <span>Tạo lịch trình tự động bằng AI</span>
+                <span>Tạo lịch trình chuyến đi</span>
               </>
             )}
           </button>
 
           <p className="text-[10px] text-center text-slate-400 mt-2">
-            ✨ AI sẽ tự động phân chia giờ giấc, điểm ăn uống và tính toán chi phí nhóm
+            Sắp xếp giờ giấc, địa điểm tham quan, ẩm thực và dự toán chi phí phù hợp
           </p>
         </div>
       </div>

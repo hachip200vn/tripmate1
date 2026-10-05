@@ -10,8 +10,11 @@ import {
   Trash2,
   AlertTriangle,
   X,
+  Crown,
+  Trophy,
+  ArrowRight
 } from 'lucide-react';
-import { VotePoll } from '../types';
+import { VotePoll, TripRole } from '../types';
 
 interface VotingViewProps {
   polls: VotePoll[];
@@ -22,6 +25,8 @@ interface VotingViewProps {
   onDeletePoll?: (pollId: string) => void;
   onSwitchToItinerary?: () => void;
   onOpenAiPlanner?: () => void;
+  userRole?: TripRole;
+  onEndPollEarly?: (pollId: string) => void;
 }
 
 export const VotingView: React.FC<VotingViewProps> = ({
@@ -33,6 +38,8 @@ export const VotingView: React.FC<VotingViewProps> = ({
   onDeletePoll,
   onSwitchToItinerary,
   onOpenAiPlanner,
+  userRole = 'Trưởng nhóm',
+  onEndPollEarly,
 }) => {
   const [pollToDelete, setPollToDelete] = useState<VotePoll | null>(null);
   // 1. EMPTY STATE: When no trip plan has been selected yet
@@ -49,19 +56,15 @@ export const VotingView: React.FC<VotingViewProps> = ({
         </div>
 
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs font-bold mb-3">
-          <span>⚠️ Chưa có lịch trình được chọn</span>
+          <span>⚠️ Chưa có lịch trình</span>
         </div>
 
         <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight mb-2">
-          Bình chọn cùng đồng đội
+          Bình chọn cùng nhóm
         </h2>
 
         <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 max-w-sm mb-6 leading-relaxed bg-slate-50 dark:bg-slate-800/80 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700">
-          <strong className="text-sky-700 dark:text-sky-300 block mb-1">💡 Lưu ý:</strong>
-          Hãy tạo lịch trình trước khi tham gia bình chọn địa điểm cùng nhóm.
-          <span className="block text-slate-500 dark:text-slate-400 text-xs mt-1">
-            Các cuộc bỏ phiếu chọn nhà hàng, phương tiện và giờ giấc sẽ tự động đồng bộ theo điểm đến bạn chọn!
-          </span>
+          Hãy tạo lịch trình trước để cùng các thành viên bình chọn quán ăn, phương tiện và địa điểm phù hợp cho chuyến đi.
         </p>
 
         <div className="flex flex-col sm:flex-row gap-3 w-full max-w-xs">
@@ -73,9 +76,8 @@ export const VotingView: React.FC<VotingViewProps> = ({
                 onSwitchToItinerary();
               }
             }}
-            className="w-full h-12 rounded-2xl bg-sky-600 hover:bg-sky-700 active:scale-[0.98] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-sky-600/25 transition-all"
+            className="w-full h-12 rounded-2xl bg-sky-700 hover:bg-sky-800 active:scale-[0.98] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-sky-700/25 transition-all"
           >
-            <Sparkles className="w-4 h-4" />
             <span>Tạo lịch trình ngay</span>
           </button>
         </div>
@@ -83,23 +85,27 @@ export const VotingView: React.FC<VotingViewProps> = ({
     );
   }
 
-  // 2. SYNCHRONIZED POLLS VIEW
+  // 2. POLLS VIEW
   return (
     <div className="flex flex-col w-full pb-28 animate-in fade-in duration-200">
-      {/* Banner with Destination Sync */}
-      <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-sky-600 to-cyan-700 text-white shadow-md mb-5 relative overflow-hidden">
-        <div className="relative z-10">
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/20 backdrop-blur-md text-white text-[11px] font-extrabold mb-2 border border-white/20">
-            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-            <span>Đồng bộ theo lịch trình: {currentDestination}</span>
-          </div>
-          <h2 className="text-xl sm:text-2xl font-black tracking-tight leading-tight">
-            Biểu quyết chuyến đi {currentDestination}
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
+            Bình chọn nhóm
           </h2>
-          <p className="text-xs text-sky-100 mt-1 max-w-md">
-            Cùng nhóm bỏ phiếu công khai để chọn quán ăn ngon, phương tiện và giờ giấc phù hợp nhất cho chuyến đi {currentDestination}.
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Biểu quyết để chọn các điểm đến và hoạt động cho chuyến đi
           </p>
         </div>
+        <button
+          type="button"
+          onClick={onCreatePoll}
+          className="px-3.5 py-2 rounded-xl bg-sky-700 hover:bg-sky-800 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
+        >
+          <Plus className="w-4 h-4" />
+          <span>Tạo bình chọn</span>
+        </button>
       </div>
 
       {/* Polls List */}
@@ -127,26 +133,40 @@ export const VotingView: React.FC<VotingViewProps> = ({
         ) : (
           polls.map((poll) => {
             const totalVotes = poll.options.reduce((sum, opt) => sum + opt.votes, 0);
+            const isClosed = poll.status === 'closed';
+            const maxVotes = Math.max(...poll.options.map((o) => o.votes), 0);
+            const winningOptId = poll.winningOptionId || (maxVotes > 0 ? poll.options.find((o) => o.votes === maxVotes)?.id : poll.options[0]?.id);
 
             return (
               <div
                 key={poll.id}
-                className="bg-white dark:bg-slate-800/90 rounded-3xl p-5 border border-slate-200/90 dark:border-slate-700 shadow-sm transition-shadow hover:shadow-md"
+                className={`bg-white dark:bg-slate-800/90 rounded-3xl p-5 border shadow-sm transition-shadow hover:shadow-md ${
+                  isClosed
+                    ? 'border-emerald-300/80 dark:border-emerald-800/60 ring-1 ring-emerald-500/20'
+                    : 'border-slate-200/90 dark:border-slate-700'
+                }`}
               >
                 <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-orange-50 text-orange-700 dark:bg-orange-950/50 dark:text-orange-300">
                       {poll.category}
                     </span>
-                    <span className="text-xs text-slate-400 flex items-center gap-1">
-                      <Clock className="w-3.5 h-3.5" />
-                      Hạn: {poll.deadline}
-                    </span>
+                    {isClosed ? (
+                      <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                        Đã kết thúc
+                      </span>
+                    ) : (
+                      <span className="text-xs text-slate-400 flex items-center gap-1">
+                        <Clock className="w-3.5 h-3.5" />
+                        Hạn: {poll.deadline}
+                      </span>
+                    )}
                   </div>
 
                   {/* Edit & Delete Action Buttons */}
                   <div className="flex items-center gap-1">
-                    {onEditPoll && (
+                    {onEditPoll && !isClosed && (
                       <button
                         type="button"
                         onClick={() => onEditPoll(poll)}
@@ -182,21 +202,30 @@ export const VotingView: React.FC<VotingViewProps> = ({
                 <div className="space-y-3">
                   {poll.options.map((opt) => {
                     const percentage = totalVotes > 0 ? Math.round((opt.votes / totalVotes) * 100) : 0;
+                    const isWinner = isClosed && opt.id === winningOptId;
 
                     return (
                       <div
                         key={opt.id}
-                        onClick={() => onVoteOption(poll.id, opt.id)}
-                        className={`relative overflow-hidden p-3.5 rounded-2xl border transition-all cursor-pointer ${
-                          opt.votedByMe
-                            ? 'border-sky-500 bg-sky-50/70 dark:bg-sky-950/40'
-                            : 'border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800 hover:bg-slate-100/70'
+                        onClick={() => {
+                          if (!isClosed) {
+                            onVoteOption(poll.id, opt.id);
+                          }
+                        }}
+                        className={`relative overflow-hidden p-3.5 rounded-2xl border transition-all ${
+                          isWinner
+                            ? 'border-emerald-500 bg-emerald-50/70 dark:bg-emerald-950/40 ring-2 ring-emerald-500/30'
+                            : opt.votedByMe
+                            ? 'border-sky-500 bg-sky-50/70 dark:bg-sky-950/40 cursor-pointer'
+                            : isClosed
+                            ? 'border-slate-200 dark:border-slate-700 bg-slate-50/30 dark:bg-slate-800/40 opacity-80'
+                            : 'border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800 hover:bg-slate-100/70 cursor-pointer'
                         }`}
                       >
                         {/* Background fill progress bar */}
                         <div
                           className={`absolute left-0 top-0 bottom-0 transition-all duration-500 opacity-20 ${
-                            opt.votedByMe ? 'bg-sky-500' : 'bg-slate-400'
+                            isWinner ? 'bg-emerald-500' : opt.votedByMe ? 'bg-sky-500' : 'bg-slate-400'
                           }`}
                           style={{ width: `${percentage}%` }}
                         />
@@ -207,9 +236,13 @@ export const VotingView: React.FC<VotingViewProps> = ({
                               <h4 className="font-bold text-xs sm:text-sm text-slate-800 dark:text-slate-100 truncate">
                                 {opt.title}
                               </h4>
-                              {opt.votedByMe && (
+                              {isWinner ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-600 text-white font-bold text-[10px] shadow-2xs">
+                                  <span>Được chọn nhiều nhất</span>
+                                </span>
+                              ) : opt.votedByMe ? (
                                 <CheckCircle2 className="w-4 h-4 text-sky-600 flex-shrink-0" />
-                              )}
+                              ) : null}
                             </div>
                             <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-0.5">
                               <MapPin className="w-3 h-3 text-slate-400" />
@@ -218,7 +251,7 @@ export const VotingView: React.FC<VotingViewProps> = ({
                           </div>
 
                           <div className="text-right flex-shrink-0">
-                            <span className={`text-sm font-black ${opt.votedByMe ? 'text-sky-600 dark:text-sky-400' : 'text-slate-700 dark:text-slate-300'}`}>
+                            <span className={`text-sm font-black ${isWinner ? 'text-emerald-700 dark:text-emerald-400' : opt.votedByMe ? 'text-sky-600 dark:text-sky-400' : 'text-slate-700 dark:text-slate-300'}`}>
                               {opt.votes} phiếu
                             </span>
                             <span className="block text-[10px] text-slate-400 font-semibold">
@@ -230,6 +263,43 @@ export const VotingView: React.FC<VotingViewProps> = ({
                     );
                   })}
                 </div>
+
+                {/* Trưởng nhóm có thể kết thúc sớm */}
+                {!isClosed && userRole === 'Trưởng nhóm' && (
+                  <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-700/80 flex items-center justify-between gap-2.5">
+                    <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                      Trưởng nhóm có thể kết thúc sớm
+                    </span>
+
+                    <button
+                      type="button"
+                      onClick={() => onEndPollEarly?.(poll.id)}
+                      className="px-3.5 py-2 rounded-xl bg-sky-700 hover:bg-sky-800 text-white font-bold text-xs shadow-xs active:scale-95 transition-all cursor-pointer"
+                    >
+                      <span>Kết thúc bình chọn</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* Khi đã kết thúc: Thông báo kết quả */}
+                {isClosed && (
+                  <div className="mt-3.5 pt-3 border-t border-slate-100 dark:border-slate-700/80 flex items-center justify-between text-xs">
+                    <span className="flex items-center gap-1.5 text-slate-600 dark:text-slate-300 font-medium">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                      Đã chốt kết quả và thêm vào lịch trình
+                    </span>
+                    {onSwitchToItinerary && (
+                      <button
+                        type="button"
+                        onClick={onSwitchToItinerary}
+                        className="text-sky-600 dark:text-sky-400 font-bold hover:underline flex items-center gap-1 cursor-pointer"
+                      >
+                        <span>Xem Lịch trình</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             );
           })

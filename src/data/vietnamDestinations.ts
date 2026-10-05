@@ -58,6 +58,15 @@ export const VIETNAM_DESTINATIONS: DestinationItem[] = [
     googleMapQuery: 'Hà Nội, Việt Nam',
   },
   {
+    id: 'haiphong',
+    name: 'Hải Phòng',
+    province: 'Hải Phòng',
+    region: 'Miền Bắc',
+    tag: 'Thành phố hoa phượng đỏ & Food tour',
+    popularSpots: ['Đồ Sơn', 'Quần đảo Cát Bà', 'Vịnh Lan Hạ', 'Food Tour Phố Cổ'],
+    googleMapQuery: 'Hải Phòng, Việt Nam',
+  },
+  {
     id: 'sapa',
     name: 'Sa Pa',
     province: 'Lào Cai',
@@ -280,10 +289,10 @@ export function searchDestinations(query: string): DestinationItem[] {
   const cleanQuery = removeVietnameseTones(query);
   const rawQuery = query.trim().toLowerCase();
 
-  // 1. Nhóm khớp từ đầu tiên (ví dụ "h" -> Hà Nội, Hà Giang, Hải Phòng...)
-  const startsWithRaw: DestinationItem[] = [];
+  // 1. Nhóm khớp tiền tố trực tiếp (ví dụ "ha" -> Hà Nội, Hải Phòng, Hạ Long, Hà Giang...)
+  const startsWithExact: DestinationItem[] = [];
   const startsWithClean: DestinationItem[] = [];
-  const containsRaw: DestinationItem[] = [];
+  const wordStartsWith: DestinationItem[] = [];
   const containsClean: DestinationItem[] = [];
 
   for (const item of VIETNAM_DESTINATIONS) {
@@ -292,22 +301,27 @@ export function searchDestinations(query: string): DestinationItem[] {
     const rawProvince = item.province.toLowerCase();
     const cleanProvince = removeVietnameseTones(item.province);
 
+    // Kiểm tra tiền tố chính xác
     if (rawName.startsWith(rawQuery) || rawProvince.startsWith(rawQuery)) {
-      startsWithRaw.push(item);
+      startsWithExact.push(item);
     } else if (cleanName.startsWith(cleanQuery) || cleanProvince.startsWith(cleanQuery)) {
       startsWithClean.push(item);
-    } else if (rawName.includes(rawQuery) || rawProvince.includes(rawQuery)) {
-      containsRaw.push(item);
-    } else if (cleanName.includes(cleanQuery) || cleanProvince.includes(cleanQuery) || removeVietnameseTones(item.tag).includes(cleanQuery)) {
-      containsClean.push(item);
+    } else if (cleanQuery.length > 3) {
+      // Khi từ khóa từ 4 ký tự trở lên mới tìm kiếm từ lân cận hoặc substring
+      const words = cleanName.split(/[\s—\-]+/);
+      if (words.some((w) => w.startsWith(cleanQuery))) {
+        wordStartsWith.push(item);
+      } else if (cleanName.includes(cleanQuery) || cleanProvince.includes(cleanQuery)) {
+        containsClean.push(item);
+      }
     }
   }
 
-  // Gộp theo thứ tự ưu tiên chính xác nhất
+  // Gộp theo thứ tự ưu tiên: Khớp chính xác tên bắt đầu bằng query
   const combined = [
-    ...startsWithRaw,
+    ...startsWithExact,
     ...startsWithClean,
-    ...containsRaw,
+    ...wordStartsWith,
     ...containsClean
   ];
 

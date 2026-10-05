@@ -40,8 +40,8 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
 
   // Login form state
-  const [loginIdentifier, setLoginIdentifier] = useState(lastUserEmail);
-  const [loginPassword, setLoginPassword] = useState('TripMate2025!');
+  const [loginIdentifier, setLoginIdentifier] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
 
@@ -125,13 +125,6 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
     }, 700);
   };
 
-  // Quick fill demo user
-  const handleQuickFillDemo = () => {
-    setLoginIdentifier(lastUserEmail);
-    setLoginPassword('TripMate2025!');
-    setErrorMessage('');
-  };
-
   return (
     <div className="min-h-screen w-full bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col items-center justify-center p-3 sm:p-6 transition-colors duration-200">
       
@@ -173,8 +166,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
           </div>
 
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-sky-50 dark:bg-sky-950/70 border border-sky-200/80 dark:border-sky-800/80 text-sky-700 dark:text-sky-300 text-xs font-bold mb-2">
-            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-            <span>Đồng hành du lịch nhóm thông minh</span>
+            <span>Lên kế hoạch & đồng hành du lịch nhóm</span>
           </div>
 
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">
@@ -290,7 +282,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
               </div>
             </div>
 
-            {/* Remember me & Quick Fill */}
+            {/* Remember me */}
             <div className="flex items-center justify-between text-xs pt-0.5">
               <label className="flex items-center gap-2 cursor-pointer select-none">
                 <input
@@ -303,41 +295,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({
                   Ghi nhớ đăng nhập
                 </span>
               </label>
-
-              <button
-                type="button"
-                onClick={handleQuickFillDemo}
-                className="text-xs text-sky-600 dark:text-sky-400 font-bold hover:underline cursor-pointer"
-              >
-                Tài khoản mẫu
-              </button>
             </div>
-
-            {/* Quick Demo User Card */}
-            {lastUserEmail && (
-              <div
-                onClick={handleQuickFillDemo}
-                className="p-2.5 rounded-2xl bg-sky-50/80 dark:bg-sky-950/40 border border-sky-200/80 dark:border-sky-800/60 flex items-center justify-between cursor-pointer hover:bg-sky-100/70 transition-all"
-                title="Nhấn để đăng nhập nhanh với tài khoản này"
-              >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-8 h-8 rounded-full bg-sky-600 text-white font-black text-xs flex items-center justify-center flex-shrink-0">
-                    VH
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
-                      {lastUserName}
-                    </p>
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
-                      {lastUserEmail}
-                    </p>
-                  </div>
-                </div>
-                <span className="text-[10px] font-bold px-2 py-1 rounded-lg bg-sky-600 text-white flex-shrink-0">
-                  Điền nhanh
-                </span>
-              </div>
-            )}
 
             {/* Submit Button */}
             <button

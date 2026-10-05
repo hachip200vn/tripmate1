@@ -484,6 +484,8 @@ export const exploreSpots = [
 
 export interface GeneratePlanOptions {
   destination?: string;
+  origin?: string;
+  departureLocation?: string;
   startDate?: string;
   endDate?: string;
   membersCount?: number;

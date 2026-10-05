@@ -16,7 +16,8 @@ import {
   Calendar,
   AlertCircle,
   FileText,
-  Filter
+  Filter,
+  QrCode
 } from 'lucide-react';
 import { ExpenseItem, Member, UserBankQr } from '../types';
 import { formatCurrency } from '../utils/format';
@@ -75,7 +76,7 @@ export const BudgetView: React.FC<BudgetViewProps> = ({
         </div>
 
         <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 text-xs font-bold mb-3">
-          <span>⚠️ Chưa có lịch trình được chọn</span>
+          <span>⚠️ Chưa có lịch trình</span>
         </div>
 
         <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight mb-2">
@@ -83,11 +84,7 @@ export const BudgetView: React.FC<BudgetViewProps> = ({
         </h2>
 
         <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 max-w-sm mb-6 leading-relaxed bg-slate-50 dark:bg-slate-800/80 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700">
-          <strong className="text-sky-700 dark:text-sky-300 block mb-1">💡 Lưu ý:</strong>
-          Hãy tạo lịch trình trước khi theo dõi ngân sách và chia tiền nhóm.
-          <span className="block text-slate-500 dark:text-slate-400 text-xs mt-1">
-            Bảng dự toán chi phí khách sạn, vé thắng cảnh và ăn uống sẽ tự động đồng bộ theo điểm đến bạn chọn!
-          </span>
+          Hãy tạo lịch trình chuyến đi trước để theo dõi chi tiêu và chia tiền cùng các thành viên.
         </p>
 
         <div className="flex flex-col sm:flex-row gap-3 w-full max-w-xs">
@@ -99,9 +96,8 @@ export const BudgetView: React.FC<BudgetViewProps> = ({
                 onSwitchToItinerary();
               }
             }}
-            className="w-full h-12 rounded-2xl bg-sky-600 hover:bg-sky-700 active:scale-[0.98] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-sky-600/25 transition-all"
+            className="w-full h-12 rounded-2xl bg-sky-700 hover:bg-sky-800 active:scale-[0.98] text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md shadow-sky-700/25 transition-all"
           >
-            <Sparkles className="w-4 h-4" />
             <span>Tạo lịch trình ngay</span>
           </button>
         </div>
@@ -246,14 +242,61 @@ export const BudgetView: React.FC<BudgetViewProps> = ({
           <span className="text-xs text-slate-400 font-semibold">{members.length} thành viên</span>
         </div>
 
-        <div className="bg-white dark:bg-slate-800/90 rounded-3xl p-4 border border-slate-200/90 dark:border-slate-700 shadow-sm space-y-3">
+        {/* QR Bank Account Settings Card */}
+        <div className="p-3.5 rounded-2xl bg-gradient-to-r from-emerald-50 via-teal-50 to-sky-50 dark:from-emerald-950/40 dark:via-teal-950/30 dark:to-sky-950/40 border border-emerald-200/80 dark:border-emerald-800/60 mb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center flex-shrink-0 shadow-sm">
+              <QrCode className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-black text-slate-800 dark:text-slate-100">
+                  Mã QR Thanh Toán VietQR
+                </span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 font-extrabold uppercase">
+                  Tự động điền tiền
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-600 dark:text-slate-300 truncate mt-0.5">
+                {userBankQr ? `${userBankQr.bankName} • ${userBankQr.accountNumber} (${userBankQr.accountName})` : 'Chưa cài đặt mã QR'}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 flex-shrink-0 self-end sm:self-auto">
+            {onOpenUpdateQr && (
+              <button
+                type="button"
+                onClick={onOpenUpdateQr}
+                className="px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 text-xs font-bold shadow-2xs transition-all cursor-pointer flex items-center gap-1"
+                title="Cài đặt thông tin tài khoản nhận tiền QR"
+              >
+                <Pencil className="w-3 h-3 text-emerald-600" />
+                <span>Cài đặt QR</span>
+              </button>
+            )}
+            {onOpenSettleQr && (
+              <button
+                type="button"
+                onClick={() => onOpenSettleQr(userBankQr?.accountName || 'Tôi', 0, 'receive')}
+                className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold shadow-sm active:scale-95 transition-all cursor-pointer flex items-center gap-1.5"
+                title="Mở mã QR nhận tiền của bạn"
+              >
+                <QrCode className="w-3.5 h-3.5" />
+                <span>Mã QR của tôi</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-slate-800/90 rounded-3xl p-4 border border-slate-200/90 dark:border-slate-700 shadow-sm divide-y divide-slate-100 dark:divide-slate-750">
           {members.map((member) => {
             const diff = member.paidAmount - perPersonAvg;
             const isOwed = diff > 0;
             const isOwing = diff < 0;
 
             return (
-              <div key={member.id} className="flex items-center justify-between py-1">
+              <div key={member.id} className="flex items-center justify-between py-2.5 first:pt-0 last:pb-0">
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-sky-600 to-cyan-500 text-white flex items-center justify-center font-bold text-xs shadow-sm">
                     {member.initials}
@@ -268,26 +311,48 @@ export const BudgetView: React.FC<BudgetViewProps> = ({
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2.5">
                   {/* Status 1: ĐƯỢC NHẬN LẠI TIỀN */}
                   {isOwed && (
-                    <div className="text-right">
+                    <div className="text-right flex flex-col items-end">
                       <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 justify-end">
                         <ArrowDownLeft className="w-3.5 h-3.5" />
                         +{formatCurrency(Math.abs(diff))} đ
                       </span>
                       <span className="text-[10px] text-emerald-600/80 font-medium">Được nhận lại</span>
+                      {onOpenSettleQr && (
+                        <button
+                          type="button"
+                          onClick={() => onOpenSettleQr(member.name, Math.abs(diff), 'receive')}
+                          className="mt-1 px-2 py-0.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-[10px] font-extrabold flex items-center gap-1 transition-all cursor-pointer"
+                          title="Xem mã QR nhận tiền"
+                        >
+                          <QrCode className="w-3 h-3 text-emerald-600" />
+                          <span>QR nhận</span>
+                        </button>
+                      )}
                     </div>
                   )}
 
                   {/* Status 2: CẦN ĐÓNG THÊM */}
                   {isOwing && (
-                    <div className="text-right">
+                    <div className="text-right flex flex-col items-end">
                       <span className="text-xs font-bold text-orange-600 dark:text-orange-400 flex items-center gap-1 justify-end">
                         <ArrowUpRight className="w-3.5 h-3.5" />
                         -{formatCurrency(Math.abs(diff))} đ
                       </span>
                       <span className="text-[10px] text-slate-400">Cần đóng thêm</span>
+                      {onOpenSettleQr && (
+                        <button
+                          type="button"
+                          onClick={() => onOpenSettleQr(member.name, Math.abs(diff), 'pay')}
+                          className="mt-1 px-2.5 py-0.5 rounded-lg bg-orange-600 hover:bg-orange-700 text-white text-[10px] font-extrabold flex items-center gap-1 shadow-2xs transition-all cursor-pointer"
+                          title="Quét mã QR VietQR để thanh toán quyết toán"
+                        >
+                          <QrCode className="w-3 h-3" />
+                          <span>Quét QR trả</span>
+                        </button>
+                      )}
                     </div>
                   )}
 

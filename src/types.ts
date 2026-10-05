@@ -139,6 +139,8 @@ export type VotePoll = {
   category: string;
   status: 'active' | 'closed';
   options: VoteOption[];
+  winningOptionId?: string;
+  winningOptionTitle?: string;
 };
 
 export type ExpenseItem = {

@@ -12,7 +12,6 @@ import { AiPlannerModal } from './components/AiPlannerModal';
 import { NotificationsModal } from './components/NotificationsModal';
 import { PhoneOtpModal } from './components/PhoneOtpModal';
 import { PasswordModal } from './components/PasswordModal';
-import { AuthModal } from './components/AuthModal';
 import { SettleQrModal } from './components/SettleQrModal';
 import { AddExpenseModal } from './components/AddExpenseModal';
 import { CreatePollModal } from './components/CreatePollModal';
@@ -20,9 +19,8 @@ import { InviteMembersModal } from './components/InviteMembersModal';
 import { UpdateUserQrModal } from './components/UpdateUserQrModal';
 import { TripManagerModal } from './components/TripManagerModal';
 import { JoinTripModal } from './components/JoinTripModal';
+import { AddActivityModal } from './components/AddActivityModal';
 import { TripsListView } from './components/TripsListView';
-import { ManualTripModal } from './components/ManualTripModal';
-import { AiDestinationRecommendModal } from './components/AiDestinationRecommendModal';
 import { AuthScreen } from './components/AuthScreen';
 
 import {
@@ -52,6 +50,7 @@ import {
   Member,
   UserBankQr,
   Trip,
+  TripStatus,
 } from './types';
 import { CheckCircle2 } from 'lucide-react';
 
@@ -62,10 +61,9 @@ export default function App() {
     return localStorage.getItem('tripmate_theme') === 'dark';
   });
 
-  // User Authentication State (Persisted in localStorage)
+  // User Authentication State (User requested: Mở app lên sẽ phải đăng nhập, đăng ký trước)
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(() => {
-    const savedAuth = localStorage.getItem('tripmate_is_logged_in');
-    return savedAuth !== null ? savedAuth === 'true' : true;
+    return false;
   });
 
   // User Profile information
@@ -80,8 +78,22 @@ export default function App() {
   });
 
   // Multi-Trip State Management (Persisted in localStorage)
+  // Multi-Trip State Management (User requested: Mới đầu thì sẽ chưa có lịch trình gì cả, vừa vào mới tạo được lịch trình)
+  // Clean up any legacy localStorage trips
+  useEffect(() => {
+    try {
+      localStorage.removeItem('tripmate_user_trips_v5');
+      localStorage.removeItem('tripmate_current_trip_id_v5');
+      localStorage.removeItem('tripmate_user_trips_v4');
+      localStorage.removeItem('tripmate_current_trip_id_v4');
+      localStorage.removeItem('tripmate_user_trips_v3');
+      localStorage.removeItem('tripmate_user_trips_v2');
+      localStorage.removeItem('tripmate_user_trips');
+    } catch (e) {}
+  }, []);
+
   const [trips, setTrips] = useState<Trip[]>(() => {
-    const saved = localStorage.getItem('tripmate_user_trips');
+    const saved = sessionStorage.getItem('tripmate_active_trips');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -92,13 +104,12 @@ export default function App() {
         console.error('Failed to parse saved trips', e);
       }
     }
-    return initialTrips;
+    // Initially, there are NO trips by default! User starts empty and creates their own trip!
+    return [];
   });
 
   const [currentTripId, setCurrentTripId] = useState<string>(() => {
-    const savedId = localStorage.getItem('tripmate_current_trip_id');
-    if (savedId) return savedId;
-    return initialTrips[0]?.id || '';
+    return sessionStorage.getItem('tripmate_active_current_trip_id') || '';
   });
 
   // Selected Day within active trip
@@ -106,7 +117,7 @@ export default function App() {
 
   // Active trip reference
   const activeTrip: Trip | null =
-    trips.find((t) => t.id === currentTripId) || trips[0] || null;
+    trips.find((t) => t.id === currentTripId) || (trips.length > 0 ? trips[0] : null);
 
   // Active Trip derived properties
   const activeTripDays: TripDay[] = activeTrip?.days || [];
@@ -115,10 +126,10 @@ export default function App() {
   const activeExpenses: ExpenseItem[] = activeTrip?.expenses || [];
   const activeMembers: Member[] = activeTrip?.members || initialMembers;
 
-  // Save trips and currentTripId to localStorage
+  // Save trips and currentTripId to sessionStorage
   useEffect(() => {
     try {
-      localStorage.setItem('tripmate_user_trips', JSON.stringify(trips));
+      sessionStorage.setItem('tripmate_active_trips', JSON.stringify(trips));
     } catch (e) {
       console.error('Error saving trips', e);
     }
@@ -126,9 +137,21 @@ export default function App() {
 
   useEffect(() => {
     if (currentTripId) {
-      localStorage.setItem('tripmate_current_trip_id', currentTripId);
+      sessionStorage.setItem('tripmate_active_current_trip_id', currentTripId);
+    } else {
+      sessionStorage.removeItem('tripmate_active_current_trip_id');
     }
   }, [currentTripId]);
+
+  // Load sample trip if user wants to preview demo
+  const handleLoadSampleTrip = () => {
+    setTrips(initialTrips);
+    if (initialTrips.length > 0) {
+      setCurrentTripId(initialTrips[0].id);
+      setSelectedDayNumber(1);
+      showToast('Đã nạp lịch trình mẫu: Đà Nẵng — Hội An! 🏖️');
+    }
+  };
 
   // Adjust selected day if out of range for the switched trip
   useEffect(() => {
@@ -145,7 +168,6 @@ export default function App() {
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
   const [showPhoneModal, setShowPhoneModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [showAuthModal, setShowAuthModal] = useState(false);
   const [showSettleQrModal, setShowSettleQrModal] = useState(false);
   const [settlePayer, setSettlePayer] = useState<{
     name: string;
@@ -159,8 +181,7 @@ export default function App() {
   const [showUpdateQrModal, setShowUpdateQrModal] = useState(false);
   const [showTripManagerModal, setShowTripManagerModal] = useState(false);
   const [showJoinTripModal, setShowJoinTripModal] = useState(false);
-  const [showManualTripModal, setShowManualTripModal] = useState(false);
-  const [showAiRecommendModal, setShowAiRecommendModal] = useState(false);
+  const [showAddActivityModal, setShowAddActivityModal] = useState(false);
 
   // Selected trip for Invite Modal (defaults to activeTrip)
   const [tripForInvite, setTripForInvite] = useState<Trip | null>(null);
@@ -427,6 +448,78 @@ export default function App() {
     setEditingPoll(null);
   };
 
+  // End Trip handler (User requested: Cần thêm nút kết thúc chuyến đi ở tab lịch trình)
+  const handleEndTrip = (tripId: string) => {
+    setTrips((prev) =>
+      prev.map((t) => (t.id === tripId ? { ...t, status: 'completed' as TripStatus } : t))
+    );
+    showToast(`Chúc mừng bạn đã hoàn thành và kết thúc chuyến đi! 🎉`);
+  };
+
+  const handleReopenTrip = (tripId: string) => {
+    setTrips((prev) =>
+      prev.map((t) => (t.id === tripId ? { ...t, status: 'active' as TripStatus } : t))
+    );
+    showToast(`Đã kích hoạt lại chuyến đi đang diễn ra.`);
+  };
+
+  // End Poll Early & Add Winning Option to Itinerary (User requested: Tab bình chọn, trưởng nhóm có thể kết thúc sớm và tự động đưa vào lịch trình)
+  const handleEndPollEarly = (pollId: string) => {
+    if (!activeTrip) return;
+    const targetPoll = activeTrip.polls.find((p) => p.id === pollId);
+    if (!targetPoll) return;
+
+    // Find option with max votes
+    const maxVotes = Math.max(...targetPoll.options.map((o) => o.votes), 0);
+    const winningOpt =
+      (maxVotes > 0 ? targetPoll.options.find((o) => o.votes === maxVotes) : null) ||
+      targetPoll.options[0];
+
+    if (!winningOpt) return;
+
+    const targetDay = selectedDayNumber > 0 ? selectedDayNumber : 1;
+
+    // New activity to append to itinerary
+    const newAct: TimelineActivity = {
+      id: `act-poll-${Date.now()}`,
+      dayNumber: targetDay,
+      time: targetPoll.category.includes('Ẩm thực') || targetPoll.category.includes('Ăn uống') ? '12:00' : '15:30',
+      category: targetPoll.category,
+      title: winningOpt.title,
+      location: winningOpt.location || activeTrip.destination,
+      costText: winningOpt.priceText || 'Miễn phí',
+      statusText: 'Đã duyệt',
+      statusType: 'approved',
+      iconType: targetPoll.category.includes('Ẩm thực') || targetPoll.category.includes('Ăn uống') ? 'food' : 'landmark',
+      details: `Đã thống nhất theo kết quả bình chọn của nhóm (${winningOpt.votes} phiếu).`,
+    };
+
+    setTrips((prev) =>
+      prev.map((t) => {
+        if (t.id !== activeTrip.id) return t;
+
+        const updatedPolls = t.polls.map((p) =>
+          p.id === pollId
+            ? {
+                ...p,
+                status: 'closed' as const,
+                winningOptionId: winningOpt.id,
+                winningOptionTitle: winningOpt.title,
+              }
+            : p
+        );
+
+        return {
+          ...t,
+          polls: updatedPolls,
+          activities: [...t.activities, newAct],
+        };
+      })
+    );
+
+    showToast(`Đã kết thúc bình chọn! "${winningOpt.title}" đã được thêm vào lịch trình Ngày ${targetDay}.`);
+  };
+
   // Direct add member from invite modal
   const handleAddMemberDirectly = (name: string, phone: string) => {
     if (!activeTrip) return;
@@ -645,15 +738,29 @@ export default function App() {
     showToast('Đã xóa bình luận.');
   };
 
-  // Optimize route simulation
-  const handleOptimizeRoute = () => {
-    showToast('AI đã tối ưu lộ trình: Tiết kiệm 45 phút di chuyển!');
+  // Add activity prompt & save
+  const handleAddActivity = () => {
+    if (!activeTrip) {
+      setShowAiPlannerModal(true);
+      showToast('Vui lòng tạo lịch trình trước khi thêm hoạt động!');
+      return;
+    }
+    setShowAddActivityModal(true);
   };
 
-  // Add activity prompt
-  const handleAddActivity = () => {
-    setCurrentTab('kham-pha');
-    showToast('Chọn địa điểm muốn ghé thăm từ mục Khám phá để thêm vào!');
+  const handleSaveActivity = (activity: TimelineActivity) => {
+    if (!activeTrip) return;
+    setTrips((prev) =>
+      prev.map((t) => {
+        if (t.id !== activeTrip.id) return t;
+        return {
+          ...t,
+          activities: [...t.activities, activity],
+        };
+      })
+    );
+    setShowAddActivityModal(false);
+    showToast(`Đã thêm hoạt động: ${activity.title}`);
   };
 
   // Mark all notifications read
@@ -666,7 +773,12 @@ export default function App() {
   const handleLogout = () => {
     setIsLoggedIn(false);
     localStorage.setItem('tripmate_is_logged_in', 'false');
-    setShowAuthModal(false);
+    setTrips([]);
+    setCurrentTripId('');
+    try {
+      sessionStorage.removeItem('tripmate_active_trips');
+      sessionStorage.removeItem('tripmate_active_current_trip_id');
+    } catch (e) {}
     showToast('Đã đăng xuất tài khoản.');
   };
 
@@ -682,8 +794,15 @@ export default function App() {
       setUserPhone(userData.phone);
       localStorage.setItem('tripmate_user_phone', userData.phone);
     }
+    // User requested: Mới đầu thì sẽ chưa có lịch trình gì cả, vừa vào mới tạo được lịch trình
+    setTrips([]);
+    setCurrentTripId('');
+    try {
+      sessionStorage.removeItem('tripmate_active_trips');
+      sessionStorage.removeItem('tripmate_active_current_trip_id');
+    } catch (e) {}
     setCurrentTab('lich-trinh');
-    showToast(`Chào mừng ${userData.name} quay trở lại TripMate! ✨`);
+    showToast(`Chào mừng ${userData.name}! Hãy tạo lịch trình chuyến đi của bạn. ✨`);
   };
 
   const unreadCount = notifications.filter((n) => n.isUnread).length;
@@ -696,11 +815,6 @@ export default function App() {
           darkMode={darkMode}
           onToggleDarkMode={toggleDarkMode}
           onLoginSuccess={handleLoginSuccess}
-          onContinueAsGuest={() => {
-            setIsLoggedIn(true);
-            localStorage.setItem('tripmate_is_logged_in', 'true');
-            showToast('Bạn đang sử dụng TripMate với tư cách Khách.');
-          }}
           lastUserEmail={userEmail}
           lastUserName={userName}
         />
@@ -759,8 +873,7 @@ export default function App() {
                     handleSelectTrip(id);
                     setCurrentTab('lich-trinh');
                   }}
-                  onOpenCreateWithAi={() => setShowAiRecommendModal(true)}
-                  onOpenManualCreate={() => setShowManualTripModal(true)}
+                  onOpenCreateWithAi={() => setShowAiPlannerModal(true)}
                   onOpenJoinTrip={() => setShowJoinTripModal(true)}
                   onOpenInviteForTrip={(t) => {
                     setTripForInvite(t);
@@ -799,13 +912,15 @@ export default function App() {
                   aiSummary={activeTrip?.aiSummary}
                   trips={trips}
                   currentTripId={currentTripId}
+                  tripStatus={activeTrip?.status}
                   onSelectTrip={handleSelectTrip}
                   onOpenTripManager={() => setCurrentTab('chuyen-di')}
                   onOpenJoinTrip={() => setShowJoinTripModal(true)}
-                  onOpenManualCreateTrip={() => setShowManualTripModal(true)}
-                  onOpenAiRecommendTrip={() => setShowAiRecommendModal(true)}
-                  onOpenAiPlanner={() => setShowAiRecommendModal(true)}
+                  onOpenAiPlanner={() => setShowAiPlannerModal(true)}
+                  onLoadSampleTrip={handleLoadSampleTrip}
                   onAddActivity={handleAddActivity}
+                  onEndTrip={() => activeTrip && handleEndTrip(activeTrip.id)}
+                  onReopenTrip={() => activeTrip && handleReopenTrip(activeTrip.id)}
                   onOpenInviteModal={() => {
                     setTripForInvite(activeTrip);
                     setShowInviteModal(true);
@@ -814,10 +929,6 @@ export default function App() {
                     setCurrentTab('binh-chon');
                     showToast(`Chuyển đến bình chọn cho: ${actTitle}`);
                   }}
-                  onOpenFullscreenMap={() => {
-                    showToast('Bản đồ toàn màn hình cùng định vị GPS');
-                  }}
-                  onOptimizeRoute={handleOptimizeRoute}
                   onUpdateActivityStatus={handleUpdateActivityStatus}
                   onDeleteActivity={handleDeleteActivity}
                   onAddActivityComment={handleAddActivityComment}
@@ -841,9 +952,6 @@ export default function App() {
               >
                 <ExploreView
                   currentDestination={activeTrip?.destination}
-                  onAddSpotToItinerary={handleAddSpotToItinerary}
-                  onSwitchToItinerary={() => setCurrentTab('lich-trinh')}
-                  onCreateItineraryForDestination={handleCreateItineraryForDestination}
                 />
               </motion.div>
             )}
@@ -859,10 +967,12 @@ export default function App() {
                 <VotingView
                   polls={activePolls}
                   currentDestination={activeTrip?.destination}
+                  userRole={activeTrip?.userRole || 'Trưởng nhóm'}
                   onVoteOption={handleVoteOption}
                   onCreatePoll={handleCreatePoll}
                   onEditPoll={handleEditPoll}
                   onDeletePoll={handleDeletePoll}
+                  onEndPollEarly={handleEndPollEarly}
                   onSwitchToItinerary={() => setCurrentTab('lich-trinh')}
                   onOpenAiPlanner={() => {
                     setCurrentTab('lich-trinh');
@@ -983,14 +1093,6 @@ export default function App() {
           }}
         />
 
-        <AuthModal
-          isOpen={showAuthModal}
-          onClose={() => setShowAuthModal(false)}
-          onAuthSuccess={(email) => {
-            showToast(`Đã đăng nhập thành công: ${email}!`);
-          }}
-        />
-
         <SettleQrModal
           isOpen={showSettleQrModal}
           onClose={() => setShowSettleQrModal(false)}
@@ -1064,43 +1166,22 @@ export default function App() {
           onDeleteTrip={handleDeleteTrip}
         />
 
+        {/* Add Activity Modal */}
+        <AddActivityModal
+          isOpen={showAddActivityModal}
+          onClose={() => setShowAddActivityModal(false)}
+          currentDay={selectedDayNumber}
+          days={activeTripDays}
+          onAddActivity={handleSaveActivity}
+          defaultDeparture={activeTrip?.departureLocation}
+          defaultDestination={activeTrip?.destination}
+        />
+
         {/* Join Trip Modal */}
         <JoinTripModal
           isOpen={showJoinTripModal}
           onClose={() => setShowJoinTripModal(false)}
           onJoinTrip={handleJoinTripByCode}
-        />
-
-        {/* Manual Trip Creation Modal */}
-        <ManualTripModal
-          isOpen={showManualTripModal}
-          onClose={() => setShowManualTripModal(false)}
-          onApplyManualTrip={(plan) => {
-            handleApplyAiGeneratedPlan(plan);
-            setShowManualTripModal(false);
-          }}
-          onCreateTrip={(plan) => {
-            handleApplyAiGeneratedPlan(plan);
-            setShowManualTripModal(false);
-          }}
-        />
-
-        {/* AI Auto Destination Recommendation Modal */}
-        <AiDestinationRecommendModal
-          isOpen={showAiRecommendModal}
-          onClose={() => setShowAiRecommendModal(false)}
-          onApplyPlan={(plan) => {
-            handleApplyAiGeneratedPlan(plan);
-            setShowAiRecommendModal(false);
-          }}
-          onApplyTripPlan={(plan) => {
-            handleApplyAiGeneratedPlan(plan);
-            setShowAiRecommendModal(false);
-          }}
-          onOpenManualPlanner={() => {
-            setShowAiRecommendModal(false);
-            setShowManualTripModal(true);
-          }}
         />
       </div>
     </div>
