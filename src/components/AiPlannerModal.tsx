@@ -302,14 +302,11 @@ export const AiPlannerModal: React.FC<AiPlannerModalProps> = ({
             ref={depContainerRef}
             className="bg-slate-50 dark:bg-slate-800/60 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 relative"
           >
-            <div className="flex items-center justify-between mb-2">
+            <div className="mb-2">
               <label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
                 <PlaneTakeoff className="w-4 h-4 text-sky-600" />
                 Điểm xuất phát (Khởi hành từ đâu)
               </label>
-              <span className="text-[10px] font-bold text-sky-700 dark:text-sky-300 bg-sky-100 dark:bg-sky-950/60 px-2 py-0.5 rounded-full">
-                Nơi bắt đầu
-              </span>
             </div>
 
             <div className="relative">
@@ -395,14 +392,11 @@ export const AiPlannerModal: React.FC<AiPlannerModalProps> = ({
             ref={destContainerRef}
             className="bg-slate-50 dark:bg-slate-800/60 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-700 relative"
           >
-            <div className="flex items-center justify-between mb-2">
+            <div className="mb-2">
               <label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
                 <MapPin className="w-4 h-4 text-emerald-600" />
                 Điểm đến bạn muốn tới
               </label>
-              <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full">
-                Nơi trải nghiệm
-              </span>
             </div>
 
             <div className="relative">
