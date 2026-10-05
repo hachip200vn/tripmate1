@@ -14,6 +14,7 @@ import {
   SlidersHorizontal,
   ChevronRight,
   MoreVertical,
+  Maximize2,
   Utensils,
   Compass,
   Waves,
@@ -25,6 +26,9 @@ import {
   X,
   ExternalLink,
   Navigation,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
   CheckSquare,
   AlertCircle,
   Layers,
@@ -119,6 +123,18 @@ export const ItineraryView: React.FC<ItineraryViewProps> = ({
   const [activityStatusMenu, setActivityStatusMenu] = useState<TimelineActivity | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showEndTripConfirm, setShowEndTripConfirm] = useState(false);
+
+  // Interactive Map State
+  const [showInteractiveMapModal, setShowInteractiveMapModal] = useState(false);
+  const [selectedMapStopIndex, setSelectedMapStopIndex] = useState<number>(0);
+  const [mapZoom, setMapZoom] = useState<number>(1);
+
+  // Open interactive map modal
+  const handleOpenInteractiveMap = (stopIndex = 0) => {
+    setSelectedMapStopIndex(stopIndex);
+    setShowInteractiveMapModal(true);
+    if (onOpenFullscreenMap) onOpenFullscreenMap();
+  };
 
   // Status definitions
   const availableStatuses: {
@@ -489,6 +505,18 @@ export const ItineraryView: React.FC<ItineraryViewProps> = ({
               </p>
             )}
           </div>
+
+          {currentActivities.length > 0 && (
+            <button
+              type="button"
+              onClick={() => handleOpenInteractiveMap(0)}
+              className="text-xs font-bold text-sky-600 hover:text-sky-700 dark:text-sky-400 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-sky-50 dark:bg-sky-950/60 border border-sky-200 dark:border-sky-800 transition-colors shadow-2xs hover:shadow-xs cursor-pointer"
+              title="Mở bản đồ lộ trình chi tiết ngày này"
+            >
+              <Maximize2 className="w-3.5 h-3.5" />
+              <span>Mở bản đồ</span>
+            </button>
+          )}
         </div>
 
         {currentActivities.length === 0 ? (
@@ -580,10 +608,20 @@ export const ItineraryView: React.FC<ItineraryViewProps> = ({
                   </div>
 
                   {/* Card Bottom Quick Link */}
-                  <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-700/80 flex items-center justify-end text-xs">
+                  <div className="mt-2.5 pt-2 border-t border-slate-100 dark:border-slate-700/80 flex items-center justify-between text-xs">
                     <button
+                      type="button"
+                      onClick={() => handleOpenInteractiveMap(index)}
+                      className="text-[11px] font-bold text-sky-600 hover:text-sky-700 dark:text-cyan-400 flex items-center gap-1 hover:underline cursor-pointer"
+                    >
+                      <Navigation className="w-3 h-3" />
+                      <span>Xem trên bản đồ</span>
+                    </button>
+
+                    <button
+                      type="button"
                       onClick={() => setSelectedActivityForDetails(act)}
-                      className="text-[11px] text-sky-600 hover:text-sky-700 dark:text-sky-400 font-bold flex items-center gap-1"
+                      className="text-[11px] text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 font-semibold cursor-pointer"
                     >
                       Chi tiết & Ghi chú →
                     </button>
@@ -594,6 +632,80 @@ export const ItineraryView: React.FC<ItineraryViewProps> = ({
           </div>
         )}
       </div>
+
+      {/* Map Section Preview (CLICK TO OPEN INTERACTIVE MAP) */}
+      {currentActivities.length > 0 && (
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-extrabold text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
+              <Navigation className="w-4 h-4 text-sky-600" />
+              <span>Bản đồ di chuyển ngày {selectedDay}</span>
+            </h3>
+            <button
+              type="button"
+              onClick={() => handleOpenInteractiveMap(0)}
+              className="text-xs font-bold text-sky-600 hover:text-sky-700 dark:text-sky-400 flex items-center gap-1 cursor-pointer"
+            >
+              <Maximize2 className="w-3.5 h-3.5" />
+              <span>Xem toàn màn hình</span>
+            </button>
+          </div>
+
+          {/* Clickable Map Preview Card */}
+          <div
+            onClick={() => handleOpenInteractiveMap(0)}
+            className="relative w-full h-44 rounded-2xl overflow-hidden border border-slate-200/80 dark:border-slate-700 shadow-sm cursor-pointer group"
+            title="Chạm để mở bản đồ tương tác"
+          >
+            <div className="absolute inset-0 bg-sky-50 dark:bg-slate-800 bg-[radial-gradient(#0284c7_1px,transparent_1px)] [background-size:16px_16px] opacity-70 group-hover:opacity-90 transition-opacity" />
+
+            {/* Illustrated route svg */}
+            <svg className="absolute inset-0 w-full h-full" viewBox="0 0 400 160" preserveAspectRatio="none">
+              <path
+                d="M 50 120 Q 140 40 220 90 T 360 40"
+                fill="none"
+                stroke="#0284c7"
+                strokeWidth="4"
+                strokeDasharray="6,6"
+                className="animate-pulse"
+              />
+              <circle cx="50" cy="120" r="8" fill="#0284c7" stroke="#ffffff" strokeWidth="2" />
+              <circle cx="180" cy="70" r="10" fill="#f97316" stroke="#ffffff" strokeWidth="2" />
+              <circle cx="360" cy="40" r="8" fill="#10b981" stroke="#ffffff" strokeWidth="2" />
+            </svg>
+
+            {/* Points labels */}
+            <div className="absolute left-6 bottom-4 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm px-2 py-0.5 rounded text-[10px] font-bold text-slate-700 dark:text-slate-300 shadow">
+              {currentActivities[0]?.title || 'Điểm xuất phát'}
+            </div>
+            {currentActivities[1] && (
+              <div className="absolute left-1/3 top-6 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm px-2 py-0.5 rounded text-[10px] font-bold text-orange-600 shadow">
+                {currentActivities[1].title}
+              </div>
+            )}
+            {currentActivities[2] && (
+              <div className="absolute right-6 top-3 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm px-2 py-0.5 rounded text-[10px] font-bold text-emerald-600 shadow">
+                {currentActivities[2].title}
+              </div>
+            )}
+
+            {/* Route Distance Banner */}
+            <div className="absolute bottom-3 left-3 right-3 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-xl p-2.5 flex items-center justify-between border border-slate-200 dark:border-slate-800 shadow-md">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-sky-100 dark:bg-sky-900/50 text-sky-600 flex items-center justify-center">
+                  <Car className="w-4 h-4" />
+                </div>
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                  {currentActivities.length} điểm dừng • Lộ trình di chuyển
+                </span>
+              </div>
+              <span className="text-[11px] text-sky-600 dark:text-cyan-400 font-semibold flex items-center gap-0.5">
+                Chạm xem chi tiết <ChevronRight className="w-3.5 h-3.5" />
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Sticky Bottom Actions */}
       <div className="space-y-2 pt-2">
@@ -783,13 +895,262 @@ export const ItineraryView: React.FC<ItineraryViewProps> = ({
               </div>
             )}
 
-            <div className="flex">
+            <div className="flex gap-2">
               <button
+                type="button"
                 onClick={() => setSelectedActivityForDetails(null)}
-                className="w-full py-3 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs transition-colors"
+                className="flex-1 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs transition-colors cursor-pointer"
               >
                 Đóng
               </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const actIdx = currentActivities.findIndex((a) => a.id === selectedActivityForDetails.id);
+                  handleOpenInteractiveMap(actIdx >= 0 ? actIdx : 0);
+                  setSelectedActivityForDetails(null);
+                }}
+                className="flex-1 py-3 rounded-xl bg-sky-700 hover:bg-sky-800 text-white font-bold text-xs shadow-md flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Navigation className="w-3.5 h-3.5" />
+                <span>Xem trên bản đồ</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* FULLSCREEN INTERACTIVE MAP MODAL */}
+      {showInteractiveMapModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-0 sm:p-4 animate-in fade-in">
+          <div className="w-full h-full sm:h-[90vh] sm:max-w-2xl bg-white dark:bg-slate-900 sm:rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col overflow-hidden animate-in zoom-in-95">
+            {/* Map Modal Header */}
+            <div className="flex items-center justify-between px-4 py-3 bg-white/95 dark:bg-slate-900/95 border-b border-slate-100 dark:border-slate-800 flex-shrink-0">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-sky-100 dark:bg-sky-950 text-sky-600 flex items-center justify-center">
+                  <Navigation className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-slate-100">
+                    Bản đồ lộ trình tương tác: Ngày {selectedDay}
+                  </h3>
+                  <p className="text-[10px] text-slate-400">
+                    {currentActivities.length} điểm dừng • Lộ trình di chuyển
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowInteractiveMapModal(false)}
+                className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:text-slate-200 flex items-center justify-center cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Day Switcher in Map */}
+            <div className="px-4 py-2 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-100 dark:border-slate-800 flex items-center gap-2 overflow-x-auto no-scrollbar flex-shrink-0">
+              <span className="text-[11px] font-bold text-slate-400 whitespace-nowrap">Chọn ngày:</span>
+              {days.map((d) => (
+                <button
+                  key={d.dayNumber}
+                  type="button"
+                  onClick={() => {
+                    onSelectDay(d.dayNumber);
+                    setSelectedMapStopIndex(0);
+                  }}
+                  className={`px-3 py-1 rounded-xl text-xs font-bold whitespace-nowrap transition-colors cursor-pointer ${
+                    selectedDay === d.dayNumber
+                      ? 'bg-sky-600 text-white shadow-sm'
+                      : 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600'
+                  }`}
+                >
+                  Ngày {d.dayNumber}
+                </button>
+              ))}
+            </div>
+
+            {/* Interactive Canvas/SVG Map Area */}
+            <div className="relative flex-1 bg-slate-100 dark:bg-slate-950 overflow-hidden flex flex-col justify-between">
+              {/* Map grid background */}
+              <div
+                className="absolute inset-0 bg-[radial-gradient(#0284c7_1px,transparent_1px)] [background-size:24px_24px] opacity-40 transition-transform duration-300"
+                style={{ transform: `scale(${mapZoom})` }}
+              />
+
+              {/* Map Zoom Controls */}
+              <div className="absolute top-3 right-3 z-20 flex flex-col gap-1.5 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md p-1 rounded-2xl shadow-md border border-slate-200 dark:border-slate-700">
+                <button
+                  type="button"
+                  onClick={() => setMapZoom((z) => Math.min(2, z + 0.25))}
+                  className="w-8 h-8 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-200 cursor-pointer"
+                  title="Phóng to bản đồ"
+                >
+                  <ZoomIn className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMapZoom((z) => Math.max(0.75, z - 0.25))}
+                  className="w-8 h-8 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-200 cursor-pointer"
+                  title="Thu nhỏ bản đồ"
+                >
+                  <ZoomOut className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMapZoom(1)}
+                  className="w-8 h-8 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-200 cursor-pointer"
+                  title="Đặt lại mức zoom"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* Interactive Route SVG with click points */}
+              <div
+                className="relative w-full h-64 sm:h-80 flex items-center justify-center transition-transform duration-300"
+                style={{ transform: `scale(${mapZoom})` }}
+              >
+                <svg className="w-full h-full p-4" viewBox="0 0 500 240">
+                  {/* Connecting Route Line */}
+                  <path
+                    d="M 60 180 Q 180 50 260 130 T 440 60"
+                    fill="none"
+                    stroke="#0284c7"
+                    strokeWidth="5"
+                    strokeDasharray="8,6"
+                    className="animate-pulse"
+                  />
+
+                  {/* Dynamic interactive markers along the curve */}
+                  {currentActivities.slice(0, 5).map((act, idx) => {
+                    const positions = [
+                      { cx: 60, cy: 180 },
+                      { cx: 160, cy: 95 },
+                      { cx: 260, cy: 130 },
+                      { cx: 360, cy: 85 },
+                      { cx: 440, cy: 60 },
+                    ];
+                    const pos = positions[idx] || positions[0];
+                    const isSelected = selectedMapStopIndex === idx;
+
+                    return (
+                      <g
+                        key={act.id}
+                        onClick={() => setSelectedMapStopIndex(idx)}
+                        className="cursor-pointer group"
+                      >
+                        {/* Glow halo when selected */}
+                        {isSelected && (
+                          <circle
+                            cx={pos.cx}
+                            cy={pos.cy}
+                            r="24"
+                            fill="#0284c7"
+                            opacity="0.25"
+                            className="animate-ping"
+                          />
+                        )}
+
+                        <circle
+                          cx={pos.cx}
+                          cy={pos.cy}
+                          r={isSelected ? 16 : 12}
+                          fill={isSelected ? '#0284c7' : '#ffffff'}
+                          stroke={isSelected ? '#ffffff' : '#0284c7'}
+                          strokeWidth="3"
+                          className="transition-all duration-200 shadow-lg"
+                        />
+
+                        <text
+                          x={pos.cx}
+                          y={pos.cy + 4}
+                          textAnchor="middle"
+                          fill={isSelected ? '#ffffff' : '#0284c7'}
+                          fontSize="11"
+                          fontWeight="bold"
+                        >
+                          {idx + 1}
+                        </text>
+                      </g>
+                    );
+                  })}
+                </svg>
+              </div>
+
+              {/* FLOATING SELECTED STOP CARD ON MAP */}
+              {currentActivities[selectedMapStopIndex] && (
+                <div className="p-3.5 m-3 rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200 dark:border-slate-800 shadow-xl z-20 animate-in slide-in-from-bottom-2">
+                  <div className="flex items-start justify-between gap-2 mb-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className="w-6 h-6 rounded-full bg-sky-600 text-white font-black text-xs flex items-center justify-center shadow">
+                        {selectedMapStopIndex + 1}
+                      </span>
+                      <div>
+                        <span className="text-[10px] font-bold text-sky-600 dark:text-sky-400 block">
+                          Chặng {selectedMapStopIndex + 1} • {currentActivities[selectedMapStopIndex].time}
+                        </span>
+                        <h4 className="text-xs sm:text-sm font-black text-slate-900 dark:text-slate-100 line-clamp-1">
+                          {currentActivities[selectedMapStopIndex].title}
+                        </h4>
+                      </div>
+                    </div>
+
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-50 dark:bg-sky-950 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800 flex-shrink-0">
+                      {currentActivities[selectedMapStopIndex].statusText}
+                    </span>
+                  </div>
+
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1 mb-2.5 truncate">
+                    <MapPin className="w-3.5 h-3.5 flex-shrink-0 text-slate-400" />
+                    {currentActivities[selectedMapStopIndex].location}
+                  </p>
+
+                  <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end">
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                        currentActivities[selectedMapStopIndex].title +
+                          ' ' +
+                          currentActivities[selectedMapStopIndex].location
+                      )}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full sm:w-auto px-3.5 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-colors cursor-pointer"
+                    >
+                      <Navigation className="w-3.5 h-3.5" />
+                      <span>Chỉ đường Google Maps</span>
+                      <ExternalLink className="w-3 h-3 ml-0.5" />
+                    </a>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Waypoints Sequence List (Bottom Tray) */}
+            <div className="max-h-44 overflow-y-auto p-3 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex-shrink-0 space-y-1.5">
+              <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block mb-1">
+                Danh sách các điểm dừng liên tiếp:
+              </span>
+              {currentActivities.map((act, idx) => (
+                <div
+                  key={act.id}
+                  onClick={() => setSelectedMapStopIndex(idx)}
+                  className={`p-2 rounded-xl flex items-center justify-between text-xs cursor-pointer transition-colors ${
+                    selectedMapStopIndex === idx
+                      ? 'bg-sky-50 dark:bg-sky-950/60 border border-sky-300 dark:border-sky-800 font-bold'
+                      : 'hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 truncate">
+                    <span className="w-5 h-5 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 text-[10px] font-bold flex items-center justify-center flex-shrink-0">
+                      {idx + 1}
+                    </span>
+                    <span className="truncate">{act.title}</span>
+                  </div>
+                  <span className="text-[10px] text-slate-400 flex-shrink-0 ml-2">{act.time}</span>
+                </div>
+              ))}
             </div>
           </div>
         </div>

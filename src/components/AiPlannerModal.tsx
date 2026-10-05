@@ -14,7 +14,6 @@ import {
   MessageSquarePlus,
   Loader2,
   Search,
-  Map,
   Navigation,
   AlertCircle,
   ArrowRight
@@ -22,7 +21,6 @@ import {
 import { TripPlanData } from '../types';
 import { generatePrototypeTripPlan } from '../data/tripData';
 import { searchDestinations, DestinationItem, POPULAR_DESTINATIONS } from '../data/vietnamDestinations';
-import { VietnamMapSelector } from './VietnamMapSelector';
 
 // Date helpers: format local ISO YYYY-MM-DD
 const getTodayIso = (): string => {
@@ -66,7 +64,6 @@ export const AiPlannerModal: React.FC<AiPlannerModalProps> = ({
   // Default dates: startDate is TODAY, endDate is today + 3 days
   const [startDate, setStartDate] = useState(() => getTodayIso());
   const [endDate, setEndDate] = useState(() => getFutureIso(3));
-  const [showVietnamMap, setShowVietnamMap] = useState(true);
   const [membersCount, setMembersCount] = useState(5);
   const [budgetTier, setBudgetTier] = useState<'budget' | 'standard' | 'luxury'>('standard');
   const [selectedVibes, setSelectedVibes] = useState<string[]>([
@@ -300,34 +297,6 @@ export const AiPlannerModal: React.FC<AiPlannerModalProps> = ({
 
         {/* Form Fields */}
         <div className="space-y-4">
-          {/* Vietnam Interactive Map Toggle & Component (USER REQUEST: Tích hợp bản đồ Việt Nam vào phần nhập điểm xuất phát và điểm đến) */}
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                <Map className="w-4 h-4 text-sky-600" />
-                Bản đồ lộ trình Việt Nam trực quan
-              </span>
-              <button
-                type="button"
-                onClick={() => setShowVietnamMap(!showVietnamMap)}
-                className="text-[11px] font-bold text-sky-600 hover:text-sky-700 dark:text-sky-400 flex items-center gap-1 px-2.5 py-1 rounded-xl bg-sky-50 dark:bg-sky-950/60 border border-sky-200 dark:border-sky-800 transition-colors"
-              >
-                <span>{showVietnamMap ? 'Thu gọn bản đồ' : 'Mở bản đồ tương tác'}</span>
-              </button>
-            </div>
-
-            {showVietnamMap && (
-              <div className="mb-2 animate-in fade-in duration-200">
-                <VietnamMapSelector
-                  currentDeparture={departureLocation}
-                  currentDestination={destination}
-                  onSelectDeparture={(loc) => setDepartureLocation(loc)}
-                  onSelectDestination={(loc) => setDestination(loc)}
-                />
-              </div>
-            )}
-          </div>
-
           {/* Departure Location */}
           <div
             ref={depContainerRef}
