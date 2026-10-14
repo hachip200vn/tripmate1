@@ -305,7 +305,7 @@ export const AiPlannerModal: React.FC<AiPlannerModalProps> = ({
             <div className="mb-2">
               <label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
                 <PlaneTakeoff className="w-4 h-4 text-sky-600" />
-                Điểm xuất phát (Khởi hành từ đâu)
+                Điểm xuất phát
               </label>
             </div>
 
@@ -318,7 +318,7 @@ export const AiPlannerModal: React.FC<AiPlannerModalProps> = ({
                   setDepartureLocation(e.target.value);
                   setIsDepDropdownOpen(true);
                 }}
-                placeholder="Nhập nơi bạn xuất phát (VD: Hà Nội, Hải Phòng, TP.HCM...)"
+                placeholder="Nhập điểm xuất phát (VD: Hà Nội, TP.HCM...)"
                 className="w-full h-11 pl-9 pr-8 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-bold text-xs text-slate-800 dark:text-slate-100 outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 transition-all shadow-sm"
               />
               <MapPin className="w-4 h-4 absolute left-3 top-3.5 text-slate-400" />
@@ -395,7 +395,7 @@ export const AiPlannerModal: React.FC<AiPlannerModalProps> = ({
             <div className="mb-2">
               <label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
                 <MapPin className="w-4 h-4 text-emerald-600" />
-                Điểm đến bạn muốn tới
+                Điểm đến
               </label>
             </div>
 
@@ -408,7 +408,7 @@ export const AiPlannerModal: React.FC<AiPlannerModalProps> = ({
                   setDestination(e.target.value);
                   setIsDestDropdownOpen(true);
                 }}
-                placeholder="Nhập tên tỉnh thành (Ví dụ: Ha → Hà Nội, Hải Phòng...)"
+                placeholder="Nhập điểm đến (VD: Đà Nẵng, Phú Quốc, Sa Pa...)"
                 className="w-full h-11 pl-9 pr-8 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-bold text-xs text-slate-800 dark:text-slate-100 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all shadow-sm"
               />
               <Search className="w-4 h-4 absolute left-3 top-3.5 text-slate-400" />

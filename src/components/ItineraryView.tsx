@@ -351,6 +351,17 @@ export const ItineraryView: React.FC<ItineraryViewProps> = ({
           </div>
 
           <div className="flex items-center gap-1.5">
+            {currentActivities.length > 0 && (
+              <button
+                type="button"
+                onClick={() => handleOpenInteractiveMap(0)}
+                className="h-8 px-2.5 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-md flex items-center gap-1 text-white text-[11px] font-bold transition-colors cursor-pointer"
+                title="Mở bản đồ lộ trình"
+              >
+                <Navigation className="w-3.5 h-3.5 text-cyan-300" />
+                <span>Bản đồ</span>
+              </button>
+            )}
             {onOpenTripManager && trips.length > 0 && (
               <button
                 type="button"
